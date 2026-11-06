@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>SideloadTW 匯兌精算 Pro</title>
+<title>Sideload匯兌</title>
 <style>
   :root {
     --bg-main: #0B0B0C;
@@ -15,11 +15,11 @@
     --gold: #D4AF6A;
     --gold-light: #E6C88A;
     --gold-dim: rgba(212, 175, 106, 0.12);
-    --gold-border: rgba(212, 175, 106, 0.30);
+    --gold-border: rgba(212, 175, 106, 0.28);
     --text-main: #F4F4F6;
     --text-sub: #B8B8C0;
     --text-muted: #7A7A84;
-    --border: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.07);
     --danger: #DF6C75;
   }
   * {
@@ -47,11 +47,11 @@
     height: 100%;
     background-color: var(--bg-main);
   }
-  /* 頂部固定導航列：修正圖一遮擋，flex 自動縮放 */
+  /* 頂部固定導航列 */
   .header {
     flex-shrink: 0;
     background: #111114;
-    border-bottom: 1px solid var(--gold-border);
+    border-bottom: 1px solid var(--border);
     padding-top: env(safe-area-inset-top, 0px);
     padding-left: 12px;
     padding-right: 12px;
@@ -64,7 +64,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
   }
   .brand {
     display: flex;
@@ -73,11 +73,13 @@
     min-width: 0;
     flex: 1;
   }
+  /* 移除金色外圈，純黑底圓角圖示 */
   .brand-icon {
     width: 36px;
     height: 36px;
     border-radius: 9px;
-    border: 1.2px solid var(--gold);
+    background: #0E0E10;
+    border: none;
     flex-shrink: 0;
   }
   .brand-text {
@@ -93,7 +95,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* 解決圖一時間被遮擋問題：增加最小寬度自適應與省略處理 */
   .brand-sub {
     font-size: 10.5px;
     color: var(--text-muted);
@@ -102,6 +103,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.2;
+    font-variant-numeric: tabular-nums;
   }
   .header-actions {
     display: flex;
@@ -148,19 +150,45 @@
     padding: 10px 12px env(safe-area-inset-bottom, 8px) 12px;
     display: flex;
     flex-direction: column;
-    gap: 11px;
+    gap: 10px;
   }
-  /* 8 大即時匯率參數 (2x4 緊湊網格) */
+  /* 匯率看板收闔控制列 */
+  .section-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+  .section-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 0.2px;
+  }
+  .toggle-link {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-sub);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  /* 8 大即時匯率參數 */
   .rates-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
+    gap: 6px;
+  }
+  .rates-grid.collapsed {
+    display: none;
   }
   .rate-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 7px 9px;
+    border-radius: 9px;
+    padding: 6px 9px;
   }
   .rate-card.gold-edge {
     border-color: var(--gold-border);
@@ -180,7 +208,6 @@
     border-radius: 4px;
     background: var(--gold-dim);
     color: var(--gold);
-    border: 1px solid rgba(212, 175, 106, 0.2);
   }
   .rate-input-wrap {
     display: flex;
@@ -193,13 +220,13 @@
     background: transparent;
     border: none;
     color: var(--text-main);
-    font-size: 14.5px;
+    font-size: 14px;
     font-weight: 600;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     outline: none;
   }
   .rate-unit {
-    font-size: 9.5px;
+    font-size: 9px;
     color: var(--text-muted);
     flex-shrink: 0;
   }
@@ -207,11 +234,11 @@
   .panel {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 11px;
+    border-radius: 11px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 8px;
   }
   .mode-switch {
     display: grid;
@@ -219,7 +246,7 @@
     background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 3px;
+    padding: 2.5px;
     gap: 4px;
   }
   .mode-btn {
@@ -227,7 +254,7 @@
     color: var(--text-muted);
     border: none;
     border-radius: 6px;
-    padding: 7px 4px;
+    padding: 6px 4px;
     font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
@@ -258,11 +285,11 @@
     padding: 4px 9px;
   }
   .amount-input {
-    width: 100px;
+    width: 105px;
     background: transparent;
     border: none;
     color: var(--gold-light);
-    font-size: 16px;
+    font-size: 15.5px;
     font-weight: 700;
     text-align: right;
     outline: none;
@@ -295,15 +322,15 @@
     color: var(--gold-light);
     font-weight: 700;
   }
-  /* 冠軍橫幅：修正圖二字體過粗問題，改為優雅中等粗細 */
+  /* 冠軍橫幅：極簡俐落 */
   .winner-banner {
     background: linear-gradient(145deg, #1A1712, #131316);
     border: 1px solid var(--gold);
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 11px;
+    padding: 11px 12px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
   }
   .winner-top {
     display: flex;
@@ -313,18 +340,17 @@
   }
   .winner-badge {
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--gold);
-    letter-spacing: 0.4px;
   }
   .winner-name {
-    font-size: 16px;
+    font-size: 15.5px;
     font-weight: 700;
     color: var(--text-main);
     margin-top: 1px;
   }
   .winner-val {
-    font-size: 19px;
+    font-size: 18.5px;
     font-weight: 700;
     color: var(--gold-light);
     font-family: ui-monospace, SFMono-Regular, monospace;
@@ -333,19 +359,8 @@
   }
   .winner-sub {
     font-size: 10.5px;
-    font-weight: 400;
     color: var(--text-sub);
-    line-height: 1.4;
-  }
-  /* 區塊標題 */
-  .section-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--gold-light);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 2px;
+    line-height: 1.35;
   }
   .countdown-tag {
     font-size: 10.5px;
@@ -357,20 +372,21 @@
     border-radius: 5px;
     font-variant-numeric: tabular-nums;
   }
-  /* 四大方案直式卡片 (字體統一微調為標準易讀粗細) */
+  /* 四大方案卡片 (可點擊收闔明細，預設簡潔) */
   .cards-stack {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
   }
   .method-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 10px 11px;
+    border-radius: 10px;
+    padding: 9px 11px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
+    cursor: pointer;
   }
   .method-card.best {
     border-color: var(--gold);
@@ -378,7 +394,7 @@
   }
   .mc-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
@@ -389,29 +405,41 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    flex-wrap: wrap;
   }
   .best-pill {
     background: var(--gold);
     color: #0B0B0C;
     font-size: 9.5px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 1px 5px;
     border-radius: 99px;
   }
-  .mc-sub {
+  .mc-meta {
     font-size: 10.5px;
-    font-weight: 400;
     color: var(--text-muted);
-    margin-top: 1px;
-    line-height: 1.3;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mc-eff {
+    color: var(--gold);
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+  .mc-expand-hint {
+    color: var(--text-sub);
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 5px;
+    border-radius: 4px;
   }
   .mc-price-col {
     text-align: right;
     flex-shrink: 0;
   }
   .mc-primary {
-    font-size: 15.5px;
+    font-size: 15px;
     font-weight: 700;
     font-family: ui-monospace, SFMono-Regular, monospace;
     color: var(--text-main);
@@ -420,50 +448,39 @@
     color: var(--gold-light);
   }
   .mc-diff {
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 600;
     margin-top: 1px;
   }
   .diff-best { color: var(--gold); }
   .diff-lose { color: var(--danger); }
-  .mc-fee-box {
+  /* 收闔式費用明細抽屜 */
+  .mc-drawer {
+    display: none;
     background: var(--bg-input);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 7px;
-    padding: 6px 8px;
-    font-size: 10px;
-    font-weight: 400;
-    color: var(--text-sub);
-    line-height: 1.45;
-  }
-  .mc-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    padding: 7px 9px;
+    margin-top: 3px;
     font-size: 10.5px;
-    color: var(--text-muted);
-    gap: 6px;
-    flex-wrap: wrap;
+    color: var(--text-sub);
+    line-height: 1.5;
   }
-  .mc-eff {
-    color: var(--gold);
-    font-weight: 600;
-    font-family: ui-monospace, SFMono-Regular, monospace;
+  .method-card.expanded .mc-drawer {
+    display: block;
   }
-  /* 全額度速查矩陣 (5欄自適應：金額、ING、CS、Wise、CommBank/台銀直匯) */
+  /* 全額度速查矩陣 */
   .matrix-box {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 11px;
+    border-radius: 10px;
     overflow: hidden;
   }
   .matrix-unit-banner {
     background: #171612;
     border-bottom: 1px solid var(--gold-border);
-    padding: 6px 9px;
-    font-size: 10.5px;
+    padding: 5px 9px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--gold-light);
     display: flex;
@@ -472,7 +489,7 @@
   }
   .matrix-head {
     display: grid;
-    grid-template-columns: 1.05fr 1fr 1fr 1fr 1.05fr;
+    grid-template-columns: 1.05fr 1fr 1fr 1fr 1fr;
     background: var(--bg-input);
     padding: 6px 6px;
     font-size: 9.5px;
@@ -485,10 +502,9 @@
   .matrix-head div:first-child { text-align: left; }
   .matrix-row {
     display: grid;
-    grid-template-columns: 1.05fr 1fr 1fr 1fr 1.05fr;
+    grid-template-columns: 1.05fr 1fr 1fr 1fr 1fr;
     padding: 7px 6px;
     font-size: 10.5px;
-    font-weight: 400;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     align-items: center;
     text-align: right;
@@ -513,7 +529,6 @@
     font-size: 8.5px;
     color: var(--text-muted);
     margin-left: 1px;
-    font-weight: 500;
   }
   .cell-win .unit-tag {
     color: var(--gold);
@@ -525,10 +540,10 @@
   <header class="header">
     <div class="header-inner">
       <div class="brand">
-        <img class="brand-icon" src="data:image/png;base64,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" alt="SideloadTW Icon" />
+        <img class="brand-icon" src="data:image/png;base64,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" alt="SideloadTW Icon" />
         <div class="brand-text">
-          <div class="brand-title">SideloadTW 匯兌精算 Pro</div>
-          <div class="brand-sub" id="statusText">台銀/CommBank/Visa/Wise/USDT · 同步中</div>
+          <div class="brand-title">SideloadTW 匯兌精算</div>
+          <div class="brand-sub" id="statusText">台銀/CommBank/Wise/USDT · 同步中</div>
         </div>
       </div>
       <div class="header-actions">
@@ -540,98 +555,104 @@
 
   <div class="scroll-area">
     <main class="container">
-      <!-- 8 大即時匯率參數 (含台銀牌告、CommBank 匯率、Visa、CoinSpot、MAX、Wise) -->
-      <section class="rates-grid">
+      <!-- 匯率看板標題與收闔按鈕 -->
+      <div class="section-bar">
+        <span class="section-title">即時匯率看板</span>
+        <button class="toggle-link" id="toggleRatesBtn" onclick="toggleRatesGrid()">收起匯率 ▴</button>
+      </div>
+
+      <!-- 8 大即時匯率參數 -->
+      <section class="rates-grid" id="ratesGrid">
         <div class="rate-card gold-edge">
           <div class="rate-label">
-            <span>台灣銀行 AUD/TWD</span>
-            <span class="tag">台銀中價</span>
+            <span>台銀 AUD 中價</span>
+            <span class="tag">基準</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateBotAud" type="number" step="0.01" value="23.0133" oninput="recalc()" />
-            <span class="rate-unit">TWD/AUD</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
         <div class="rate-card gold-edge">
           <div class="rate-label">
-            <span>ING Visa 即時匯率</span>
-            <span class="tag">自動連動</span>
+            <span>ING Visa 匯率</span>
+            <span class="tag">連動</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateVisa" type="number" step="0.01" value="22.9075" oninput="recalc(true)" />
-            <span class="rate-unit">TWD/AUD</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
-        <div class="rate-card gold-edge">
+        <div class="rate-card">
           <div class="rate-label">
-            <span>澳洲 CommBank 匯率</span>
-            <span class="tag">澳銀牌告</span>
+            <span>CommBank 匯率</span>
+            <span class="tag">澳銀</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateCbaAudTwd" type="number" step="0.01" value="22.2500" oninput="recalc()" />
-            <span class="rate-unit">TWD/AUD</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>台銀 AUD 即期買入</span>
-            <span class="tag">直匯結匯</span>
+            <span>台銀 AUD 買入</span>
+            <span class="tag">直匯</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateBotAudBuy" type="number" step="0.01" value="22.8200" oninput="recalc()" />
-            <span class="rate-unit">TWD/AUD</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>CoinSpot 買入報價</span>
-            <span class="tag">USDT/AUD</span>
+            <span>CoinSpot 買入</span>
+            <span class="tag">USDT</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateCs" type="number" step="0.0001" value="1.4500" oninput="recalc()" />
-            <span class="rate-unit">AUD/U</span>
+            <span class="rate-unit">AUD</span>
           </div>
         </div>
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>台灣 MAX 賣出報價</span>
-            <span class="tag">USDT/TWD</span>
+            <span>台灣 MAX 賣出</span>
+            <span class="tag">USDT</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateMax" type="number" step="0.01" value="32.7500" oninput="recalc()" />
-            <span class="rate-unit">TWD/U</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>Wise 匯率 (AUD/USD)</span>
-            <span class="tag">轉美金</span>
+            <span>Wise AUD/USD</span>
+            <span class="tag">美金</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateWiseAudUsd" type="number" step="0.0001" value="0.6964" oninput="recalc()" />
-            <span class="rate-unit">USD/AUD</span>
+            <span class="rate-unit">USD</span>
           </div>
         </div>
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>台銀美金即期買入</span>
-            <span class="tag">USD/TWD</span>
+            <span>台銀 USD 買入</span>
+            <span class="tag">結匯</span>
           </div>
           <div class="rate-input-wrap">
             <input class="rate-input" id="rateBotUsdBuy" type="number" step="0.01" value="33.002" oninput="recalc()" />
-            <span class="rate-unit">TWD/USD</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
       </section>
 
-      <!-- 雙向切換與金額控制 -->
+      <!-- 雙向切換與金額控制 (上限調高至 10,000 AUD / 230,000 TWD) -->
       <section class="panel">
         <div class="mode-switch">
           <button class="mode-btn active" id="btnModeAud" onclick="setMode('AUD_TO_TWD')">
@@ -643,14 +664,14 @@
         </div>
 
         <div class="amount-row">
-          <span class="amount-label" id="amountLabel">準備轉換澳幣 (AUD)</span>
+          <span class="amount-label" id="amountLabel">轉換金額 (AUD)</span>
           <div class="amount-box">
             <input class="amount-input" id="amountInput" type="number" value="520" oninput="onAmountInput(this.value)" />
             <span class="rate-unit" id="amountUnit">AUD</span>
           </div>
         </div>
 
-        <input type="range" id="amountSlider" min="100" max="5000" step="20" value="520" oninput="onAmountInput(this.value)" />
+        <input type="range" id="amountSlider" min="100" max="10000" step="50" value="520" oninput="onAmountInput(this.value)" />
 
         <div class="preset-grid" id="presetGrid"></div>
       </section>
@@ -659,37 +680,37 @@
       <section class="winner-banner">
         <div class="winner-top">
           <div>
-            <div class="winner-badge">✦ SIDELOADTW 精算最優路線</div>
-            <div class="winner-name" id="winnerName">ING 免設備費 ATM 直領</div>
+            <div class="winner-badge">✦ 最優方案</div>
+            <div class="winner-name" id="winnerName">ING 免設備費 ATM</div>
           </div>
           <div class="winner-val" id="winnerVal">NT$ 11,912</div>
         </div>
-        <div class="winner-sub" id="winnerSub">正在計算黃金交叉點...</div>
+        <div class="winner-sub" id="winnerSub">計算中...</div>
       </section>
 
-      <!-- 四大方案直式卡片 (加入 CommBank / 台銀 跨國銀行直匯通道) -->
-      <div class="section-title">
-        <span>四大管道即時精算（含台澳銀行跨境直匯）</span>
-        <span style="font-size:10.5px;color:var(--text-muted);" id="compareSub">基準：520 AUD</span>
+      <!-- 管道對比標題 (已移除冗長台澳括號字串，加入一鍵展開/收闔明細按鈕) -->
+      <div class="section-bar">
+        <span class="section-title">管道精算對比</span>
+        <button class="toggle-link" id="toggleAllDetailsBtn" onclick="toggleAllDetails()">展開全部明細 ▾</button>
       </div>
       <section class="cards-stack" id="cardsStack"></section>
 
-      <!-- 全額度速查矩陣表 (5欄自適應 & 60s 同步倒數) -->
-      <div class="section-title">
-        <span>全額度速查矩陣（點擊切換金額）</span>
+      <!-- 全額度速查矩陣表 -->
+      <div class="section-bar">
+        <span class="section-title">全額度速查矩陣</span>
         <span class="countdown-tag" id="matrixCountdown">60s 後同步</span>
       </div>
       <section class="matrix-box">
         <div class="matrix-unit-banner">
-          <span id="matrixModeTitle">當前模式：輸入澳幣 (AUD) → 實拿新台幣 (NT$)</span>
-          <span id="matrixUnitHint">數值單位：NT$ 台幣</span>
+          <span id="matrixModeTitle">輸入澳幣 (AUD) → 實拿台幣 (NT$)</span>
+          <span id="matrixUnitHint">單位：NT$</span>
         </div>
         <div class="matrix-head">
-          <div id="matCol0">轉換金額<br/>(AUD 澳幣)</div>
-          <div id="matCol1">ING 直領<br/>(實拿 NT$)</div>
-          <div id="matCol2">CS 0.1% 掛單<br/>(實拿 NT$)</div>
-          <div id="matCol3">Wise 轉美金<br/>(實拿 NT$)</div>
-          <div id="matCol4">台澳銀行直匯<br/>(實拿 NT$)</div>
+          <div id="matCol0">金額<br/>(AUD)</div>
+          <div id="matCol1">ING<br/>(NT$)</div>
+          <div id="matCol2">CS 0.1%<br/>(NT$)</div>
+          <div id="matCol3">Wise<br/>(NT$)</div>
+          <div id="matCol4">銀行直匯<br/>(NT$)</div>
         </div>
         <div id="matrixBody"></div>
       </section>
@@ -702,44 +723,93 @@
   let audAmount = 520;
   let twdAmount = 30000;
   let autoRefresh = true;
-  let countdown = 60;
   let manualVisaOverride = false;
   let botUsdMidRate = 33.052;
+  let ratesCollapsed = false;
+  let expandedCards = new Set(); // 儲存當前展開明細的卡片 ID
 
-  // 跨國銀行直匯手續費參數 (澳洲 CommBank ⇄ 台灣銀行)
-  const CBA_OUTWARD_AUD = 6.00;        // 澳洲 CommBank NetBank 跨國電匯固定手續費 ($6 AUD)
-  const INTERMEDIARY_USD = 20.00;      // 國際中轉行扣費 (約 $20 USD，折合約 NT$660 或 $28.7 AUD)
-  const TW_BANK_INWARD_TWD = 200;      // 台灣銀行外幣匯入解匯手續費 (NT$200)
-  const BOT_OUTWARD_CABLE_TWD = 400;   // 台灣銀行匯出至澳洲郵電費+手續費 (約 NT$400)
+  // 背景真實時間戳計時器：即使 App 進入 iOS 背景，時間仍依系統時鐘精準倒數
+  const REFRESH_INTERVAL_MS = 60000;
+  let nextSyncTime = Date.now() + REFRESH_INTERVAL_MS;
 
-  // Wise 完整手續費
+  // 手續費參數
+  const CBA_OUTWARD_AUD = 6.00;
+  const INTERMEDIARY_USD = 20.00;
+  const TW_BANK_INWARD_TWD = 200;
+  const BOT_OUTWARD_CABLE_TWD = 400;
+
   const WISE_DEPOSIT_FEE_AUD = 0.00;
   const WISE_CONVERT_FEE_PCT = 0.0048;
   const WISE_WIRE_FEE_AUD = 1.58;
   const WISE_SWIFT_OUT_USD = 3.80;
 
-  // CoinSpot & MAX
   const MAX_TRADE_FEE = 0.0008;
   const MAX_WITHDRAW_TWD = 30;
   const TRC20_GAS_USDT = 1.0;
   const VISA_SPREAD = 0.0046;
 
+  function getRemainingSeconds() {
+    const rem = Math.ceil((nextSyncTime - Date.now()) / 1000);
+    return Math.max(0, rem);
+  }
+
   function updateTimerDisplay() {
-    const topText = autoRefresh ? `${countdown}s 自動` : '已暫停';
-    const matText = autoRefresh ? `${countdown}s 後同步` : '自動已暫停';
+    const sec = getRemainingSeconds();
+    const topText = autoRefresh ? `${sec}s 自動` : '已暫停';
+    const matText = autoRefresh ? `${sec}s 後同步` : '已暫停';
     document.getElementById('timerBtn').textContent = topText;
     document.getElementById('matrixCountdown').textContent = matText;
   }
 
+  function toggleRatesGrid() {
+    ratesCollapsed = !ratesCollapsed;
+    const grid = document.getElementById('ratesGrid');
+    const btn = document.getElementById('toggleRatesBtn');
+    if (ratesCollapsed) {
+      grid.classList.add('collapsed');
+      btn.textContent = '展開匯率 ▾';
+    } else {
+      grid.classList.remove('collapsed');
+      btn.textContent = '收起匯率 ▴';
+    }
+  }
+
+  function toggleCardDetail(id) {
+    if (expandedCards.has(id)) {
+      expandedCards.delete(id);
+    } else {
+      expandedCards.add(id);
+    }
+    updateToggleAllBtnText();
+    recalc();
+  }
+
+  function toggleAllDetails() {
+    const allIds = ['ing', 'cs01', 'wise', 'bank_wire'];
+    if (expandedCards.size === allIds.length) {
+      expandedCards.clear();
+    } else {
+      allIds.forEach(id => expandedCards.add(id));
+    }
+    updateToggleAllBtnText();
+    recalc();
+  }
+
+  function updateToggleAllBtnText() {
+    const btn = document.getElementById('toggleAllDetailsBtn');
+    btn.textContent = expandedCards.size === 4 ? '收起全部明細 ▴' : '展開全部明細 ▾';
+  }
+
   function renderPresets() {
     const grid = document.getElementById('presetGrid');
+    // 支援高達 10,000 AUD 及對應的 230,000 TWD
     const list = mode === 'AUD_TO_TWD'
-      ? [300, 520, 800, 1000, 1500, 2000, 3000, 5000]
-      : [5000, 10000, 15000, 20000, 30000, 50000, 80000, 100000];
+      ? [300, 500, 1000, 2000, 3000, 5000, 8000, 10000]
+      : [10000, 20000, 30000, 50000, 80000, 100000, 150000, 230000];
     const current = mode === 'AUD_TO_TWD' ? audAmount : twdAmount;
     grid.innerHTML = list.map(v => `
       <button class="preset-btn ${v === current ? 'active' : ''}" onclick="onAmountInput(${v})">
-        ${mode === 'AUD_TO_TWD' ? v + ' AUD' : (v/1000) + 'k TWD'}
+        ${mode === 'AUD_TO_TWD' ? v.toLocaleString() + ' A$' : (v/1000) + 'k NT$'}
       </button>
     `).join('');
   }
@@ -753,32 +823,32 @@
     if (mode === 'AUD_TO_TWD') {
       btnAud.className = 'mode-btn active';
       btnTwd.className = 'mode-btn';
-      document.getElementById('amountLabel').textContent = '準備轉換澳幣 (AUD)';
+      document.getElementById('amountLabel').textContent = '轉換金額 (AUD)';
       document.getElementById('amountUnit').textContent = 'AUD';
-      document.getElementById('matrixModeTitle').textContent = '當前模式：輸入澳幣 (AUD) → 實拿新台幣 (NT$)';
-      document.getElementById('matrixUnitHint').textContent = '數值單位：NT$ 台幣';
-      document.getElementById('matCol0').innerHTML = '轉換金額<br/>(AUD 澳幣)';
-      document.getElementById('matCol1').innerHTML = 'ING 直領<br/>(實拿 NT$)';
-      document.getElementById('matCol2').innerHTML = 'CS 0.1% 掛單<br/>(實拿 NT$)';
-      document.getElementById('matCol3').innerHTML = 'Wise 轉美金<br/>(實拿 NT$)';
-      document.getElementById('matCol4').innerHTML = '台澳直匯<br/>(實拿 NT$)';
-      slider.min = 100; slider.max = 5000; slider.step = 20;
-      slider.value = Math.min(5000, audAmount);
+      document.getElementById('matrixModeTitle').textContent = '輸入澳幣 (AUD) → 實拿台幣 (NT$)';
+      document.getElementById('matrixUnitHint').textContent = '單位：NT$';
+      document.getElementById('matCol0').innerHTML = '金額<br/>(AUD)';
+      document.getElementById('matCol1').innerHTML = 'ING<br/>(NT$)';
+      document.getElementById('matCol2').innerHTML = 'CS 0.1%<br/>(NT$)';
+      document.getElementById('matCol3').innerHTML = 'Wise<br/>(NT$)';
+      document.getElementById('matCol4').innerHTML = '銀行直匯<br/>(NT$)';
+      slider.min = 100; slider.max = 10000; slider.step = 50;
+      slider.value = Math.min(10000, audAmount);
       input.value = audAmount;
     } else {
       btnAud.className = 'mode-btn';
       btnTwd.className = 'mode-btn active';
-      document.getElementById('amountLabel').textContent = '目標實拿台幣 (TWD)';
+      document.getElementById('amountLabel').textContent = '目標實拿 (TWD)';
       document.getElementById('amountUnit').textContent = 'TWD';
-      document.getElementById('matrixModeTitle').textContent = '當前模式：目標台幣 (NT$) → 反推需花澳幣 (AUD)';
-      document.getElementById('matrixUnitHint').textContent = '數值單位：AUD 澳幣';
-      document.getElementById('matCol0').innerHTML = '目標金額<br/>(NT$ 台幣)';
-      document.getElementById('matCol1').innerHTML = 'ING 直領<br/>(需花 AUD)';
-      document.getElementById('matCol2').innerHTML = 'CS 0.1% 掛單<br/>(需花 AUD)';
-      document.getElementById('matCol3').innerHTML = 'Wise 轉美金<br/>(需花 AUD)';
-      document.getElementById('matCol4').innerHTML = '台澳直匯<br/>(需花 AUD)';
-      slider.min = 2000; slider.max = 100000; slider.step = 1000;
-      slider.value = Math.min(100000, twdAmount);
+      document.getElementById('matrixModeTitle').textContent = '目標台幣 (NT$) → 反推澳幣 (AUD)';
+      document.getElementById('matrixUnitHint').textContent = '單位：AUD';
+      document.getElementById('matCol0').innerHTML = '目標<br/>(NT$)';
+      document.getElementById('matCol1').innerHTML = 'ING<br/>(AUD)';
+      document.getElementById('matCol2').innerHTML = 'CS 0.1%<br/>(AUD)';
+      document.getElementById('matCol3').innerHTML = 'Wise<br/>(AUD)';
+      document.getElementById('matCol4').innerHTML = '銀行直匯<br/>(AUD)';
+      slider.min = 2000; slider.max = 230000; slider.step = 1000;
+      slider.value = Math.min(230000, twdAmount);
       input.value = twdAmount;
     }
     renderPresets();
@@ -809,18 +879,15 @@
   }
 
   function calcAudToTwd(aud, r) {
-    // 1. ING 免設備費 ATM (Visa 即期匯率, $0 手續費)
     const ingNet = aud * r.visa;
     const ingSpreadLossTwd = Math.max(0, aud * (r.botAud - r.visa));
 
-    // 2. CoinSpot 0.1% Market Order -> MAX
     const cs01FeeAud = aud * 0.001;
     const cs01UsdtBought = (aud - cs01FeeAud) / r.cs;
     const cs01UsdtArrived = Math.max(0, cs01UsdtBought - TRC20_GAS_USDT);
     const cs01MaxFeeTwd = cs01UsdtArrived * r.max * MAX_TRADE_FEE;
     const cs01Net = Math.max(0, cs01UsdtArrived * r.max - cs01MaxFeeTwd - MAX_WITHDRAW_TWD);
 
-    // 3. Wise 轉美金 -> 台灣外幣帳戶 -> 台銀換台幣
     const wiseAfterDepositAud = Math.max(0, aud - WISE_DEPOSIT_FEE_AUD);
     const wiseConvertFeeAud = wiseAfterDepositAud * WISE_CONVERT_FEE_PCT + WISE_WIRE_FEE_AUD;
     const wiseNetAudToConvert = Math.max(0, wiseAfterDepositAud - wiseConvertFeeAud);
@@ -830,8 +897,6 @@
     const wiseGrossTwd = wiseUsdArrivedTw * r.botUsdBuy;
     const wiseNet = Math.max(0, wiseGrossTwd - TW_BANK_INWARD_TWD);
 
-    // 4. 澳洲帳戶 (CommBank) 直接電匯回台灣銀行帳戶
-    // 流程：CBA 扣 $6 AUD 電匯費 -> 中轉行扣除約 $20 USD (折合約 NT$660) -> 台銀解匯費 NT$200 -> 台銀 AUD 即期買入價結售
     const cbaAudAfterOutward = Math.max(0, aud - CBA_OUTWARD_AUD);
     const intermediaryLossTwd = INTERMEDIARY_USD * r.botUsdBuy;
     const cbaGrossTwd = cbaAudAfterOutward * r.botAudBuy;
@@ -841,56 +906,45 @@
     return [
       {
         id: 'ing',
-        name: 'ING 免設備費 ATM 直領',
-        sub: '台銀/國泰/元大 ATM $0 設備費 · Visa 即期匯率直領',
+        name: 'ING 免設備費 ATM',
         val: ingNet,
         eff: ingNet / aud,
-        feeDetail: `① 澳幣扣款手續費：$0 AUD · ② 台灣 ATM 設備費：$0 TWD · ③ Visa 組織匯差：約 NT$${Math.round(ingSpreadLossTwd)}`,
-        detail: `實拿 NT$${Math.round(ingNet).toLocaleString()} · Visa 匯率 ${r.visa.toFixed(4)}`
+        feeDetail: `• 海外提款手續費：$0 AUD / 台銀國泰 ATM 設備費：$0<br/>• Visa 即期匯率：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})`,
       },
       {
         id: 'cs01',
-        name: 'CoinSpot 0.1% 掛單 → MAX',
-        sub: 'Market Order 0.1% 買 USDT · TRC20 轉回台灣 MAX 出金',
+        name: 'CoinSpot 0.1% → MAX',
         val: cs01Net,
         eff: cs01Net / aud,
-        feeDetail: `① 澳幣 PayID 入金：$0 · ② CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD · ③ TRC20 提幣：1 USDT · ④ MAX 交易+出金：NT$${Math.round(cs01MaxFeeTwd + MAX_WITHDRAW_TWD)}`,
-        detail: `到帳 ${cs01UsdtArrived.toFixed(2)} USDT → 換新台幣出金`
+        feeDetail: `• PayID 入金：$0 / CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD<br/>• TRC20 提幣：1 USDT (到帳 ${cs01UsdtArrived.toFixed(2)} U)<br/>• MAX 賣出 + 出金費：NT$${Math.round(cs01MaxFeeTwd + MAX_WITHDRAW_TWD)}`,
       },
       {
         id: 'wise',
-        name: 'Wise 轉美金 → 台灣外幣帳戶結匯',
-        sub: 'AUD 轉 USD 電匯台灣外幣帳戶 · 台銀即期買入換台幣',
+        name: 'Wise 轉美金 → 外幣結匯',
         val: wiseNet,
         eff: wiseNet / aud,
-        feeDetail: `① 澳幣匯入 Wise：$0 (PayID) · ② Wise 轉美金費：$${wiseConvertFeeAud.toFixed(2)} A$ (0.48%+$1.58) · ③ 跨境電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD + 台銀解匯 NT$${TW_BANK_INWARD_TWD} · ④ 美金結匯匯差：約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
-        detail: `到帳 ${wiseUsdArrivedTw.toFixed(2)} USD · 台銀買入 ${r.botUsdBuy.toFixed(3)}`
+        feeDetail: `• 匯入 Wise：$0 / 換美金手續費：$${wiseConvertFeeAud.toFixed(2)} AUD<br/>• 電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD (到帳 ${wiseUsdArrivedTw.toFixed(2)} USD)<br/>• 台銀解匯 NT$${TW_BANK_INWARD_TWD} + 買入匯差約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
       },
       {
         id: 'bank_wire',
-        name: '澳洲 CommBank ⇄ 台灣銀行 直匯',
-        sub: '澳洲最大銀行跨國 SWIFT 電匯直達台灣銀行帳戶',
+        name: 'CommBank ⇄ 台銀直匯',
         val: cbaNet,
         eff: cbaNet / aud,
-        feeDetail: `① CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD · ② 國際中轉行費：約 $${INTERMEDIARY_USD} USD (約 NT$${Math.round(intermediaryLossTwd)}) · ③ 台銀解匯費：NT$${TW_BANK_INWARD_TWD} · ④ 銀行買入匯差：約 NT$${Math.round(cbaSpreadLossTwd)}`,
-        detail: `台銀 AUD 買入牌告 ${r.botAudBuy.toFixed(4)} · 傳統電匯耗損偏高`
+        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 台銀解匯 NT$${TW_BANK_INWARD_TWD} + 牌告買入匯差約 NT$${Math.round(cbaSpreadLossTwd)}`,
       }
     ];
   }
 
   function calcTwdToAud(twd, r) {
-    // 1. ING 免設備費 ATM
     const ingAud = twd / r.visa;
     const ingSpreadLossTwd = Math.max(0, ingAud * (r.botAud - r.visa));
 
-    // 2. CoinSpot 0.1% -> MAX
     const usdtSoldOnMax = (twd + MAX_WITHDRAW_TWD) / (r.max * (1 - MAX_TRADE_FEE));
     const maxFeeTwd = usdtSoldOnMax * r.max * MAX_TRADE_FEE;
     const usdtNeeded = usdtSoldOnMax + TRC20_GAS_USDT;
     const cs01Aud = (usdtNeeded * r.cs) / 0.999;
     const cs01FeeAud = cs01Aud * 0.001;
 
-    // 3. Wise
     const usdArrivedTwNeeded = (twd + TW_BANK_INWARD_TWD) / r.botUsdBuy;
     const wiseFxSpreadLossTwd = usdArrivedTwNeeded * r.usdSpreadPerDollar;
     const usdConvertedNeeded = usdArrivedTwNeeded + WISE_SWIFT_OUT_USD;
@@ -898,8 +952,6 @@
     const wiseAud = (audNetNeeded + WISE_WIRE_FEE_AUD) / (1 - WISE_CONVERT_FEE_PCT);
     const wiseConvertFeeAud = wiseAud - audNetNeeded;
 
-    // 4. 台灣銀行直匯澳洲 CommBank
-    // 流程：目標實拿 twd -> 台灣帳戶匯出需支付台銀郵電費 NT$400 + 中轉行約 $20 USD + CommBank 牌告差價
     const intermediaryLossTwd = INTERMEDIARY_USD * r.botUsdBuy;
     const twdGrossNeeded = twd + BOT_OUTWARD_CABLE_TWD + intermediaryLossTwd;
     const bankWireAud = twdGrossNeeded / r.botAudBuy + CBA_OUTWARD_AUD;
@@ -908,39 +960,31 @@
     return [
       {
         id: 'ing',
-        name: 'ING 免設備費 ATM 直領',
-        sub: '台銀/國泰/元大 ATM $0 設備費 · Visa 即期匯率直領',
+        name: 'ING 免設備費 ATM',
         val: ingAud,
         eff: twd / ingAud,
-        feeDetail: `① 澳幣扣款手續費：$0 AUD · ② 台灣 ATM 設備費：$0 TWD · ③ Visa 組織匯差：約 NT$${Math.round(ingSpreadLossTwd)}`,
-        detail: `領現 NT$${twd.toLocaleString()} · Visa 匯率 ${r.visa.toFixed(4)}`
+        feeDetail: `• 海外提款手續費：$0 AUD / 台銀國泰 ATM 設備費：$0<br/>• Visa 即期匯率：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})`,
       },
       {
         id: 'cs01',
-        name: 'CoinSpot 0.1% 掛單 → MAX',
-        sub: 'Market Order 0.1% 買 USDT · TRC20 轉回台灣 MAX 出金',
+        name: 'CoinSpot 0.1% → MAX',
         val: cs01Aud,
         eff: twd / cs01Aud,
-        feeDetail: `① 澳幣 PayID 入金：$0 · ② CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD · ③ TRC20 提幣：1 USDT · ④ MAX 交易+出金：NT$${Math.round(maxFeeTwd + MAX_WITHDRAW_TWD)}`,
-        detail: `需買入 ${usdtNeeded.toFixed(2)} USDT 轉回台灣 MAX`
+        feeDetail: `• 需買入 ${usdtNeeded.toFixed(2)} USDT 轉回台灣 MAX<br/>• CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD / 提幣：1 USDT<br/>• MAX 交易 + 出金費：NT$${Math.round(maxFeeTwd + MAX_WITHDRAW_TWD)}`,
       },
       {
         id: 'wise',
-        name: 'Wise 轉美金 → 台灣外幣帳戶結匯',
-        sub: 'AUD 轉 USD 電匯台灣外幣帳戶 · 台銀即期買入換台幣',
+        name: 'Wise 轉美金 → 外幣結匯',
         val: wiseAud,
         eff: twd / wiseAud,
-        feeDetail: `① 澳幣匯入 Wise：$0 (PayID) · ② Wise 轉美金費：$${wiseConvertFeeAud.toFixed(2)} A$ (0.48%+$1.58) · ③ 跨境電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD + 台銀解匯 NT$${TW_BANK_INWARD_TWD} · ④ 美金結匯匯差：約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
-        detail: `台灣需入帳 ${usdArrivedTwNeeded.toFixed(2)} USD · 台銀買入 ${r.botUsdBuy.toFixed(3)}`
+        feeDetail: `• 台灣需到帳 ${usdArrivedTwNeeded.toFixed(2)} USD / Wise 換匯費：$${wiseConvertFeeAud.toFixed(2)} AUD<br/>• 電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD + 台銀解匯 NT$${TW_BANK_INWARD_TWD}<br/>• 台銀美金買入匯差：約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
       },
       {
         id: 'bank_wire',
-        name: '澳洲 CommBank ⇄ 台灣銀行 直匯',
-        sub: '澳洲最大銀行跨國 SWIFT 電匯直達台灣銀行帳戶',
+        name: 'CommBank ⇄ 台銀直匯',
         val: bankWireAud,
         eff: twd / bankWireAud,
-        feeDetail: `① CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD · ② 國際中轉行費：約 $${INTERMEDIARY_USD} USD (約 NT$${Math.round(intermediaryLossTwd)}) · ③ 台銀解匯費：NT$${TW_BANK_INWARD_TWD} · ④ 銀行買入匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
-        detail: `台銀 AUD 買入牌告 ${r.botAudBuy.toFixed(4)} · 傳統電匯耗損偏高`
+        feeDetail: `• 台銀匯出郵電費：NT$${BOT_OUTWARD_CABLE_TWD} / CBA 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 銀行牌告匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
       }
     ];
   }
@@ -964,32 +1008,33 @@
     let crossText = '';
     if (slopeCs01 > r.visa) {
       const crossAud = Math.ceil(fixedCs01 / (slopeCs01 - r.visa));
-      crossText = `比第二名多省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 黃金交叉：低於 ${crossAud} AUD 選 ING 直領，高於 ${crossAud} AUD 選 CoinSpot 0.1% 掛單`;
+      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 黃金交叉：${crossAud.toLocaleString()} AUD`;
     } else {
-      crossText = `比第二名多省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 當前盤口不論金額大小皆由「ING 免設備費 ATM」完勝`;
+      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 全額度皆由 ING 直領勝出`;
     }
     document.getElementById('winnerSub').textContent = crossText;
-    document.getElementById('compareSub').textContent = mode === 'AUD_TO_TWD'
-      ? `基準：${audAmount.toLocaleString()} AUD`
-      : `目標：NT$ ${twdAmount.toLocaleString()}`;
 
-    // 渲染四大直式卡片
+    // 渲染收闔式精簡卡片
     const stack = document.getElementById('cardsStack');
     stack.innerHTML = list.map(m => {
       const isBest = m.id === best.id;
+      const isExp = expandedCards.has(m.id);
       const d = Math.abs(m.val - best.val);
       const diffLabel = isBest
-        ? '<span class="diff-best">✦ 當前最划算</span>'
-        : `<span class="diff-lose">${mode === 'AUD_TO_TWD' ? '少拿 NT$ ' + Math.round(d).toLocaleString() : '多花 + ' + d.toFixed(2) + ' AUD'}</span>`;
+        ? '<span class="diff-best">✦ 最划算</span>'
+        : `<span class="diff-lose">${mode === 'AUD_TO_TWD' ? '- NT$ ' + Math.round(d).toLocaleString() : '+ ' + d.toFixed(2) + ' AUD'}</span>`;
       return `
-        <div class="method-card ${isBest ? 'best' : ''}">
+        <div class="method-card ${isBest ? 'best' : ''} ${isExp ? 'expanded' : ''}" onclick="toggleCardDetail('${m.id}')">
           <div class="mc-header">
             <div>
               <div class="mc-title">
                 <span>${m.name}</span>
-                ${isBest ? '<span class="best-pill">最優</span>' : ''}
+                ${isBest ? '<span class="best-pill">冠軍</span>' : ''}
               </div>
-              <div class="mc-sub">${m.sub}</div>
+              <div class="mc-meta">
+                <span class="mc-eff">匯率 ${m.eff.toFixed(3)}</span>
+                <span class="mc-expand-hint">${isExp ? '收起明細 ▴' : '費用明細 ▾'}</span>
+              </div>
             </div>
             <div class="mc-price-col">
               <div class="mc-primary">
@@ -998,19 +1043,15 @@
               <div class="mc-diff">${diffLabel}</div>
             </div>
           </div>
-          <div class="mc-fee-box">${m.feeDetail}</div>
-          <div class="mc-footer">
-            <span>${m.detail}</span>
-            <span class="mc-eff">有效匯率 ${m.eff.toFixed(3)} TWD/AUD</span>
-          </div>
+          <div class="mc-drawer">${m.feeDetail}</div>
         </div>
       `;
     }).join('');
 
-    // 渲染 5 欄速查矩陣
+    // 渲染速查矩陣 (最高達 10,000 AUD / 230k TWD)
     const presets = mode === 'AUD_TO_TWD'
-      ? [300, 520, 800, 1000, 1500, 2000, 3000, 5000]
-      : [5000, 10000, 15000, 20000, 30000, 50000, 80000, 100000];
+      ? [300, 500, 1000, 2000, 3000, 5000, 8000, 10000]
+      : [10000, 20000, 30000, 50000, 80000, 100000, 150000, 230000];
     const matBody = document.getElementById('matrixBody');
     matBody.innerHTML = presets.map(amt => {
       const rowList = mode === 'AUD_TO_TWD' ? calcAudToTwd(amt, r) : calcTwdToAud(amt, r);
@@ -1022,11 +1063,11 @@
       const winId = rowSorted[0].id;
       const isSelected = (mode === 'AUD_TO_TWD' && audAmount === amt) || (mode === 'TWD_TO_AUD' && twdAmount === amt);
       const fmtCell = v => mode === 'AUD_TO_TWD'
-        ? `${Math.round(v).toLocaleString()}<span class="unit-tag">NT$</span>`
-        : `${v.toFixed(1)}<span class="unit-tag">A$</span>`;
+        ? `${Math.round(v).toLocaleString()}`
+        : `${v.toFixed(1)}`;
       const firstCol = mode === 'AUD_TO_TWD'
-        ? `${amt.toLocaleString()} <span class="unit-tag">AUD</span>`
-        : `${(amt/1000)}k <span class="unit-tag">TWD</span>`;
+        ? `${amt.toLocaleString()}<span class="unit-tag">A$</span>`
+        : `${(amt/1000)}k<span class="unit-tag">NT$</span>`;
       return `
         <div class="matrix-row ${isSelected ? 'active' : ''}" onclick="onAmountInput(${amt})">
           <div>${firstCol}</div>
@@ -1041,7 +1082,9 @@
 
   async function fetchAllRates() {
     const syncBtn = document.getElementById('syncBtn');
-    syncBtn.textContent = '更新中...';
+    syncBtn.textContent = '更新中';
+    nextSyncTime = Date.now() + REFRESH_INTERVAL_MS;
+    updateTimerDisplay();
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fetchNativeRates) {
         window.webkit.messageHandlers.fetchNativeRates.postMessage({});
@@ -1058,7 +1101,6 @@
         if (twd) {
           document.getElementById('rateBotAud').value = twd.toFixed(4);
           document.getElementById('rateBotAudBuy').value = (twd - 0.19).toFixed(4);
-          // CommBank 澳洲最大銀行跨國匯率一般含 2.8% ~ 3.2% 點差
           document.getElementById('rateCbaAudTwd').value = (twd * (1 - 0.031)).toFixed(4);
           if (!manualVisaOverride) {
             document.getElementById('rateVisa').value = (twd * (1 - VISA_SPREAD)).toFixed(4);
@@ -1078,9 +1120,7 @@
         if (cgRes.value.tether.twd) document.getElementById('rateMax').value = cgRes.value.tether.twd.toFixed(4);
       }
       const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-      document.getElementById('statusText').textContent = `台銀/CommBank/Wise/USDT · 同步於 ${now}`;
-      countdown = 60;
-      updateTimerDisplay();
+      document.getElementById('statusText').textContent = `即時報價 · 更新於 ${now}`;
       recalc();
     } catch (e) {
       console.error(e);
@@ -1106,26 +1146,37 @@
     if (payload.csUsdtAud) document.getElementById('rateCs').value = Number(payload.csUsdtAud).toFixed(4);
     if (payload.maxUsdtTwd) document.getElementById('rateMax').value = Number(payload.maxUsdtTwd).toFixed(4);
     const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-    document.getElementById('statusText').textContent = `台銀/CommBank直連 · 同步於 ${now}`;
-    countdown = 60;
-    updateTimerDisplay();
+    document.getElementById('statusText').textContent = `台銀/CommBank/MAX直連 · ${now}`;
     recalc();
   };
 
+  // 檢查背景時間差：無論在前景或從背景返回，都依系統真實時鐘計算倒數並在到期時自動刷新
+  function checkClockTick() {
+    if (!autoRefresh) return;
+    const now = Date.now();
+    if (now >= nextSyncTime) {
+      fetchAllRates();
+    } else {
+      updateTimerDisplay();
+    }
+  }
+
   function toggleAutoRefresh() {
     autoRefresh = !autoRefresh;
+    if (autoRefresh) {
+      nextSyncTime = Date.now() + REFRESH_INTERVAL_MS;
+    }
     updateTimerDisplay();
   }
 
-  setInterval(() => {
-    if (!autoRefresh) return;
-    countdown--;
-    if (countdown <= 0) {
-      fetchAllRates();
-      countdown = 60;
+  setInterval(checkClockTick, 500);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && autoRefresh) {
+      checkClockTick();
     }
-    updateTimerDisplay();
-  }, 1000);
+  });
+  window.addEventListener('focus', checkClockTick);
+  window.addEventListener('pageshow', checkClockTick);
 
   renderPresets();
   recalc();
