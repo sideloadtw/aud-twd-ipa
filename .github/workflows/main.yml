@@ -114,7 +114,7 @@ jobs:
           mkdir -p Payload/AUDTWDPro.app
           cp web-build/dist/index.html Payload/AUDTWDPro.app/index.html
 
-          cat << 'EOF' > main.swift
+          cat << 'EOF' > App.swift
           import UIKit
           import WebKit
           import Foundation
@@ -236,7 +236,7 @@ jobs:
           }
           EOF
 
-          xcrun -sdk iphoneos swiftc main.swift \
+          xcrun -sdk iphoneos swiftc -parse-as-library App.swift \
             -target arm64-apple-ios15.0 \
             -O \
             -framework UIKit \
