@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract SideloadTW Icon & Compile Native iOS IPA
+      - name: Extract Borderless SideloadTW Icon & Compile Native iOS IPA
         run: |
           mkdir -p Payload/AUDTWDPro.app
           if [ -f "index.html" ]; then
@@ -65,7 +65,7 @@ jobs:
                           defer { group.leave() }
                           if let data = data, let csv = String(data: data, encoding: .utf8) {
                               for line in csv.components(separatedBy: .newlines) {
-                                  let cols = line.components(separatedBy: ",")
+                                  let cols = line.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                                   if cols.count > 13 {
                                       if cols[0] == "AUD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           midAudTwd = ((b + s) / 2.0 * 10000).rounded() / 10000
@@ -144,6 +144,8 @@ jobs:
           class ViewController: UIViewController {
               var webView: WKWebView!
               let fetcher = RateFetcher()
+              var bgTask: UIBackgroundTaskIdentifier = .invalid
+
               override var preferredStatusBarStyle: UIStatusBarStyle { return .lightContent }
               override func viewDidLoad() {
                   super.viewDidLoad()
@@ -167,6 +169,22 @@ jobs:
                   if let htmlPath = Bundle.main.path(forResource: "index", ofType: "html"),
                      let htmlString = try? String(contentsOfFile: htmlPath, encoding: .utf8) {
                       webView.loadHTMLString(htmlString, baseURL: URL(string: "https://sideloadtw.local/"))
+                  }
+
+                  NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+                      guard let self = self else { return }
+                      self.bgTask = UIApplication.shared.beginBackgroundTask(withName: "RateSyncBgTask") {
+                          UIApplication.shared.endBackgroundTask(self.bgTask)
+                          self.bgTask = .invalid
+                      }
+                  }
+                  NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { [weak self] _ in
+                      guard let self = self else { return }
+                      if self.bgTask != .invalid {
+                          UIApplication.shared.endBackgroundTask(self.bgTask)
+                          self.bgTask = .invalid
+                      }
+                      self.webView?.evaluateJavaScript("window.checkClockTick && window.checkClockTick();", completionHandler: nil)
                   }
               }
           }
@@ -200,8 +218,8 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>6.0.0</string>
-            <key>CFBundleVersion</key><string>6</string>
+            <key>CFBundleShortVersionString</key><string>7.0.0</string>
+            <key>CFBundleVersion</key><string>7</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
