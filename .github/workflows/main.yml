@@ -117,7 +117,7 @@ jobs:
                                           botAudBuy = (b * 10000).rounded() / 10000
                                           cbaAudTwd = (((b + s) / 2.0 * (1.0 - 0.031)) * 10000).rounded() / 10000
                                       }
-                                      if cols[0] == "USD", let b = Double(cols[3]), b > 0, s > 0 {
+                                      if cols[0] == "USD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           botUsdTwdBuy = (b * 1000).rounded() / 1000
                                           botUsdMid = ((b + s) / 2.0 * 1000).rounded() / 1000
                                       }
