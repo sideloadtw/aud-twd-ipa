@@ -31,29 +31,29 @@ jobs:
               guard let ctx = NSGraphicsContext.current?.cgContext else { return }
 
               let rect = CGRect(x: 0, y: 0, width: size, height: size)
-              ctx.setFillColor(CGColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1.0))
+              ctx.setFillColor(CGColor(red: 0.043, green: 0.043, blue: 0.047, alpha: 1.0))
               ctx.fill(rect)
 
               let borderRect = rect.insetBy(dx: size * 0.05, dy: size * 0.05)
               let borderPath = NSBezierPath(roundedRect: borderRect, xRadius: size * 0.18, yRadius: size * 0.18)
-              NSColor(calibratedRed: 0.0, green: 0.90, blue: 1.0, alpha: 0.45).setStroke()
+              NSColor(calibratedRed: 0.83, green: 0.686, blue: 0.416, alpha: 0.55).setStroke()
               borderPath.lineWidth = size * 0.025
               borderPath.stroke()
 
               let center = CGPoint(x: size * 0.5, y: size * 0.5)
-              let cyanArc = NSBezierPath()
-              cyanArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 20, endAngle: 195)
-              NSColor(calibratedRed: 0.0, green: 0.90, blue: 1.0, alpha: 1.0).setStroke()
-              cyanArc.lineWidth = size * 0.085
-              cyanArc.lineCapStyle = .round
-              cyanArc.stroke()
+              let topArc = NSBezierPath()
+              topArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 20, endAngle: 195)
+              NSColor(calibratedRed: 0.83, green: 0.686, blue: 0.416, alpha: 1.0).setStroke()
+              topArc.lineWidth = size * 0.085
+              topArc.lineCapStyle = .round
+              topArc.stroke()
 
-              let goldArc = NSBezierPath()
-              goldArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 200, endAngle: 15)
-              NSColor(calibratedRed: 0.96, green: 0.69, blue: 0.25, alpha: 1.0).setStroke()
-              goldArc.lineWidth = size * 0.085
-              goldArc.lineCapStyle = .round
-              goldArc.stroke()
+              let bottomArc = NSBezierPath()
+              bottomArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 200, endAngle: 15)
+              NSColor(calibratedRed: 0.62, green: 0.48, blue: 0.26, alpha: 1.0).setStroke()
+              bottomArc.lineWidth = size * 0.085
+              bottomArc.lineCapStyle = .round
+              bottomArc.stroke()
 
               let arrow = NSBezierPath()
               arrow.move(to: NSPoint(x: size * 0.5, y: size * 0.68))
@@ -61,7 +61,7 @@ jobs:
               arrow.move(to: NSPoint(x: size * 0.36, y: size * 0.46))
               arrow.line(to: NSPoint(x: size * 0.5, y: size * 0.32))
               arrow.line(to: NSPoint(x: size * 0.64, y: size * 0.46))
-              NSColor.white.setStroke()
+              NSColor(calibratedRed: 0.90, green: 0.78, blue: 0.54, alpha: 1.0).setStroke()
               arrow.lineWidth = size * 0.065
               arrow.lineCapStyle = .round
               arrow.lineJoinStyle = .round
@@ -94,6 +94,7 @@ jobs:
                   let group = DispatchGroup()
                   var midAudTwd: Double? = nil
                   var botUsdTwdBuy: Double? = nil
+                  var botUsdMid: Double? = nil
                   var wiseAudUsd: Double? = nil
                   var csUsdtAud: Double? = nil
                   var maxUsdtTwd: Double? = nil
@@ -109,8 +110,9 @@ jobs:
                                       if cols[0] == "AUD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           midAudTwd = ((b + s) / 2.0 * 10000).rounded() / 10000
                                       }
-                                      if cols[0] == "USD", let b = Double(cols[3]), b > 0 {
+                                      if cols[0] == "USD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           botUsdTwdBuy = (b * 1000).rounded() / 1000
+                                          botUsdMid = ((b + s) / 2.0 * 1000).rounded() / 1000
                                       }
                                   }
                               }
@@ -159,6 +161,7 @@ jobs:
                       var dict: [String: Double] = [:]
                       if let m = midAudTwd { dict["midAudTwd"] = m }
                       if let u = botUsdTwdBuy { dict["botUsdTwdBuy"] = u }
+                      if let um = botUsdMid { dict["botUsdMid"] = um }
                       if let w = wiseAudUsd { dict["wiseAudUsd"] = w }
                       if let c = csUsdtAud { dict["csUsdtAud"] = c }
                       if let x = maxUsdtTwd { dict["maxUsdtTwd"] = x }
@@ -176,7 +179,7 @@ jobs:
               override var preferredStatusBarStyle: UIStatusBarStyle { return .lightContent }
               override func viewDidLoad() {
                   super.viewDidLoad()
-                  let bg = UIColor(red: 5/255, green: 5/255, blue: 8/255, alpha: 1.0)
+                  let bg = UIColor(red: 11/255, green: 11/255, blue: 12/255, alpha: 1.0)
                   view.backgroundColor = bg
                   let cc = WKUserContentController()
                   cc.add(fetcher, name: "fetchNativeRates")
@@ -184,10 +187,11 @@ jobs:
                   config.userContentController = cc
                   webView = WKWebView(frame: view.bounds, configuration: config)
                   webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                  webView.isOpaque = false
+                  webView.isOpaque = true
                   webView.backgroundColor = bg
                   webView.scrollView.backgroundColor = bg
                   webView.scrollView.bounces = false
+                  webView.scrollView.alwaysBounceVertical = false
                   webView.scrollView.alwaysBounceHorizontal = false
                   webView.scrollView.contentInsetAdjustmentBehavior = .never
                   fetcher.webView = webView
@@ -228,8 +232,8 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>3.0.0</string>
-            <key>CFBundleVersion</key><string>3</string>
+            <key>CFBundleShortVersionString</key><string>4.0.0</string>
+            <key>CFBundleVersion</key><string>4</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
