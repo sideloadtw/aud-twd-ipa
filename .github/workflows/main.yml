@@ -35,37 +35,40 @@ jobs:
               ctx.fill(rect)
 
               let borderRect = rect.insetBy(dx: size * 0.05, dy: size * 0.05)
-              let borderPath = NSBezierPath(roundedRect: borderRect, xRadius: size * 0.18, yRadius: size * 0.18)
+              let borderPath = NSBezierPath(roundedRect: borderRect, xRadius: size * 0.20, yRadius: size * 0.20)
               NSColor(calibratedRed: 0.83, green: 0.686, blue: 0.416, alpha: 0.55).setStroke()
               borderPath.lineWidth = size * 0.025
               borderPath.stroke()
 
-              let center = CGPoint(x: size * 0.5, y: size * 0.5)
-              let topArc = NSBezierPath()
-              topArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 20, endAngle: 195)
-              NSColor(calibratedRed: 0.83, green: 0.686, blue: 0.416, alpha: 1.0).setStroke()
-              topArc.lineWidth = size * 0.085
-              topArc.lineCapStyle = .round
-              topArc.stroke()
+              let scale = size / 512.0
+              func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+                  return NSPoint(x: x * scale, y: size - (y * scale))
+              }
 
-              let bottomArc = NSBezierPath()
-              bottomArc.appendArc(withCenter: center, radius: size * 0.30, startAngle: 200, endAngle: 15)
-              NSColor(calibratedRed: 0.62, green: 0.48, blue: 0.26, alpha: 1.0).setStroke()
-              bottomArc.lineWidth = size * 0.085
-              bottomArc.lineCapStyle = .round
-              bottomArc.stroke()
+              let topArrow = NSBezierPath()
+              topArrow.move(to: p(240, 150))
+              topArrow.line(to: p(340, 150))
+              topArrow.line(to: p(340, 110))
+              topArrow.line(to: p(425, 195))
+              topArrow.line(to: p(340, 280))
+              topArrow.line(to: p(340, 240))
+              topArrow.line(to: p(195, 240))
+              topArrow.close()
+              topArrow.lineJoinStyle = .round
+              NSColor(calibratedRed: 0.83, green: 0.686, blue: 0.416, alpha: 1.0).setFill()
+              topArrow.fill()
 
-              let arrow = NSBezierPath()
-              arrow.move(to: NSPoint(x: size * 0.5, y: size * 0.68))
-              arrow.line(to: NSPoint(x: size * 0.5, y: size * 0.32))
-              arrow.move(to: NSPoint(x: size * 0.36, y: size * 0.46))
-              arrow.line(to: NSPoint(x: size * 0.5, y: size * 0.32))
-              arrow.line(to: NSPoint(x: size * 0.64, y: size * 0.46))
-              NSColor(calibratedRed: 0.90, green: 0.78, blue: 0.54, alpha: 1.0).setStroke()
-              arrow.lineWidth = size * 0.065
-              arrow.lineCapStyle = .round
-              arrow.lineJoinStyle = .round
-              arrow.stroke()
+              let bottomArrow = NSBezierPath()
+              bottomArrow.move(to: p(272, 362))
+              bottomArrow.line(to: p(172, 362))
+              bottomArrow.line(to: p(172, 402))
+              bottomArrow.line(to: p(87, 317))
+              bottomArrow.line(to: p(172, 232))
+              bottomArrow.line(to: p(172, 272))
+              bottomArrow.line(to: p(317, 272))
+              bottomArrow.close()
+              bottomArrow.lineJoinStyle = .round
+              bottomArrow.fill()
 
               img.unlockFocus()
               if let tiff = img.tiffRepresentation,
@@ -93,11 +96,13 @@ jobs:
               func fetchAll() {
                   let group = DispatchGroup()
                   var midAudTwd: Double? = nil
+                  var botAudBuy: Double? = nil
                   var botUsdTwdBuy: Double? = nil
                   var botUsdMid: Double? = nil
                   var wiseAudUsd: Double? = nil
                   var csUsdtAud: Double? = nil
                   var maxUsdtTwd: Double? = nil
+                  var cbaAudTwd: Double? = nil
 
                   if let botUrl = URL(string: "https://rate.bot.com.tw/xrt/flcsv/0/day") {
                       group.enter()
@@ -109,8 +114,10 @@ jobs:
                                   if cols.count > 13 {
                                       if cols[0] == "AUD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           midAudTwd = ((b + s) / 2.0 * 10000).rounded() / 10000
+                                          botAudBuy = (b * 10000).rounded() / 10000
+                                          cbaAudTwd = (((b + s) / 2.0 * (1.0 - 0.031)) * 10000).rounded() / 10000
                                       }
-                                      if cols[0] == "USD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
+                                      if cols[0] == "USD", let b = Double(cols[3]), b > 0, s > 0 {
                                           botUsdTwdBuy = (b * 1000).rounded() / 1000
                                           botUsdMid = ((b + s) / 2.0 * 1000).rounded() / 1000
                                       }
@@ -127,7 +134,11 @@ jobs:
                           if let data = data,
                              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                              let rates = json["rates"] as? [String: Any] {
-                              if midAudTwd == nil, let twd = rates["TWD"] as? Double { midAudTwd = (twd * 10000).rounded() / 10000 }
+                              if midAudTwd == nil, let twd = rates["TWD"] as? Double {
+                                  midAudTwd = (twd * 10000).rounded() / 10000
+                                  botAudBuy = ((twd - 0.19) * 10000).rounded() / 10000
+                                  cbaAudTwd = ((twd * (1.0 - 0.031)) * 10000).rounded() / 10000
+                              }
                               if let usd = rates["USD"] as? Double { wiseAudUsd = (usd * 10000).rounded() / 10000 }
                           }
                       }.resume()
@@ -160,10 +171,12 @@ jobs:
                   group.notify(queue: .main) { [weak self] in
                       var dict: [String: Double] = [:]
                       if let m = midAudTwd { dict["midAudTwd"] = m }
+                      if let b = botAudBuy { dict["botAudBuy"] = b }
+                      if let c = cbaAudTwd { dict["cbaAudTwd"] = c }
                       if let u = botUsdTwdBuy { dict["botUsdTwdBuy"] = u }
                       if let um = botUsdMid { dict["botUsdMid"] = um }
                       if let w = wiseAudUsd { dict["wiseAudUsd"] = w }
-                      if let c = csUsdtAud { dict["csUsdtAud"] = c }
+                      if let cs = csUsdtAud { dict["csUsdtAud"] = cs }
                       if let x = maxUsdtTwd { dict["maxUsdtTwd"] = x }
                       if let jsonData = try? JSONSerialization.data(withJSONObject: dict),
                          let jsonStr = String(data: jsonData, encoding: .utf8) {
@@ -232,8 +245,8 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>4.0.0</string>
-            <key>CFBundleVersion</key><string>4</string>
+            <key>CFBundleShortVersionString</key><string>5.0.0</string>
+            <key>CFBundleVersion</key><string>5</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
