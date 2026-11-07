@@ -15,7 +15,7 @@
     --gold: #D4AF6A;
     --gold-light: #E6C88A;
     --gold-dim: rgba(212, 175, 106, 0.12);
-    --gold-border: rgba(212, 175, 106, 0.28);
+    --gold-border: rgba(212, 175, 106, 0.34);
     --text-main: #F4F4F6;
     --text-sub: #B8B8C0;
     --text-muted: #7A7A84;
@@ -50,7 +50,7 @@
   .header {
     flex-shrink: 0;
     background: #111114;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--gold-border);
     padding-top: env(safe-area-inset-top, 0px);
     padding-left: 12px;
     padding-right: 12px;
@@ -171,6 +171,7 @@
     border-radius: 6px;
     cursor: pointer;
   }
+  /* 8 大即時匯率看板：全部統一金色外框 + 純唯讀即時連動顯示（不可編輯、不彈出鍵盤） */
   .rates-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -181,12 +182,9 @@
   }
   .rate-card {
     background: var(--bg-card);
-    border: 1px solid var(--border);
+    border: 1px solid var(--gold-border);
     border-radius: 9px;
-    padding: 6px 9px;
-  }
-  .rate-card.gold-edge {
-    border-color: var(--gold-border);
+    padding: 7px 10px;
   }
   .rate-label {
     font-size: 10px;
@@ -194,7 +192,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
   .tag {
     font-size: 8.5px;
@@ -203,29 +201,27 @@
     border-radius: 4px;
     background: var(--gold-dim);
     color: var(--gold);
+    border: 1px solid rgba(212, 175, 106, 0.22);
   }
-  .rate-input-wrap {
+  .rate-val-wrap {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 4px;
   }
-  .rate-input {
-    width: 100%;
-    background: transparent;
-    border: none;
+  .rate-val {
     color: var(--text-main);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 700;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    outline: none;
+    font-variant-numeric: tabular-nums;
   }
   .rate-unit {
     font-size: 9px;
     color: var(--text-muted);
     flex-shrink: 0;
   }
-  /* 圖二風格：獨立即時匯率換算器 (位於匯率看板與主拉桿中間，可收起/打開) */
+  /* 獨立即時匯率快速換算器 (支援點擊中間按鈕左右對調交換) */
   .quick-conv-box {
     background: var(--bg-card);
     border: 1px solid var(--gold-border);
@@ -294,18 +290,25 @@
     font-family: ui-monospace, SFMono-Regular, monospace;
     outline: none;
   }
-  .qc-swap-icon {
-    width: 28px;
-    height: 28px;
+  .qc-swap-btn {
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: var(--bg-elevated);
-    border: 1px solid var(--gold-border);
-    color: var(--gold);
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.15s ease;
+    padding: 0;
+  }
+  .qc-swap-btn:active {
+    background: var(--gold);
+    color: #0B0B0C;
   }
   .qc-source-tabs {
     display: grid;
@@ -655,37 +658,37 @@
         <button class="toggle-link" id="toggleRatesBtn" onclick="toggleRatesGrid()">收起匯率 ▴</button>
       </div>
 
-      <!-- 8 大即時匯率參數 -->
+      <!-- 8 大即時匯率參數：全數配置金色外框 + 純唯讀即時連動（點擊不彈鍵盤） -->
       <section class="rates-grid" id="ratesGrid">
-        <div class="rate-card gold-edge">
+        <div class="rate-card">
           <div class="rate-label">
             <span>台銀 AUD 中價</span>
             <span class="tag">基準</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateBotAud" type="number" step="0.01" value="22.8118" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateBotAud">22.4975</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
 
-        <div class="rate-card gold-edge">
+        <div class="rate-card">
           <div class="rate-label">
             <span>ING Visa 匯率</span>
             <span class="tag">官方API</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateVisa" type="number" step="0.01" value="22.7644" oninput="recalc(true)" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateVisa">22.7644</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
 
-        <div class="rate-card gold-edge">
+        <div class="rate-card">
           <div class="rate-label">
             <span>CommBank 匯率</span>
             <span class="tag">官方爬蟲</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateCbaAudTwd" type="number" step="0.01" value="22.1200" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateCbaAudTwd">21.8158</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
@@ -695,8 +698,8 @@
             <span>台銀 AUD 買入</span>
             <span class="tag">直匯</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateBotAudBuy" type="number" step="0.01" value="22.6200" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateBotAudBuy">22.3250</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
@@ -706,8 +709,8 @@
             <span>CoinSpot 買入</span>
             <span class="tag">USDT</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateCs" type="number" step="0.0001" value="1.4409" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateCs">1.4600</span>
             <span class="rate-unit">AUD</span>
           </div>
         </div>
@@ -717,8 +720,8 @@
             <span>台灣 MAX 賣出</span>
             <span class="tag">USDT</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateMax" type="number" step="0.01" value="32.8500" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateMax">32.8260</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
@@ -728,8 +731,8 @@
             <span>Wise AUD/USD</span>
             <span class="tag">美金</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateWiseAudUsd" type="number" step="0.0001" value="0.6964" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateWiseAudUsd">0.6873</span>
             <span class="rate-unit">USD</span>
           </div>
         </div>
@@ -739,38 +742,38 @@
             <span>台銀 USD 買入</span>
             <span class="tag">結匯</span>
           </div>
-          <div class="rate-input-wrap">
-            <input class="rate-input" id="rateBotUsdBuy" type="number" step="0.01" value="32.720" oninput="recalc()" />
+          <div class="rate-val-wrap">
+            <span class="rate-val" id="rateBotUsdBuy">32.690</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
       </section>
 
-      <!-- 新增：獨立即時匯率快速換算器 (如圖二，夾在圖三兩格中間，可收起或展開) -->
+      <!-- 獨立即時匯率快速換算器 (點擊中間 ⇄ 按鈕可左右對調交換) -->
       <div class="section-bar">
         <span class="section-title">即時匯率快速換算</span>
         <button class="toggle-link" id="toggleQuickConvBtn" onclick="toggleQuickConv()">收起換算 ▴</button>
       </div>
       <section class="quick-conv-box" id="quickConvBox">
         <div class="qc-rate-pill">
-          <span class="qc-rate-main" id="qcRateText">1 AUD = 22.8118 TWD</span>
+          <span class="qc-rate-main" id="qcRateText">1 AUD = 22.4975 TWD</span>
           <span class="qc-rate-tag" id="qcRateLabel">(市場匯率中間價)</span>
         </div>
         <div class="qc-inputs-row">
           <div class="qc-field">
             <div class="qc-field-top">
-              <span>AUD 澳幣</span>
-              <span>A$</span>
+              <span id="qcLeftTitle">AUD 澳幣</span>
+              <span id="qcLeftSymbol">A$</span>
             </div>
-            <input class="qc-input" id="qcAudInput" type="number" step="any" value="100" oninput="onQcAudChange(this.value)" />
+            <input class="qc-input" id="qcLeftInput" type="number" step="any" value="100" oninput="onQcLeftChange(this.value)" onblur="window.scrollTo(0,0)" />
           </div>
-          <div class="qc-swap-icon">⇄</div>
+          <button type="button" class="qc-swap-btn" id="qcSwapBtn" onclick="swapQuickConv()" title="左右交換">⇄</button>
           <div class="qc-field">
             <div class="qc-field-top">
-              <span>TWD 新台幣</span>
-              <span>NT$</span>
+              <span id="qcRightTitle">TWD 新台幣</span>
+              <span id="qcRightSymbol">NT$</span>
             </div>
-            <input class="qc-input" id="qcTwdInput" type="number" step="any" value="2281.18" oninput="onQcTwdChange(this.value)" />
+            <input class="qc-input" id="qcRightInput" type="number" step="any" value="2249.75" oninput="onQcRightChange(this.value)" onblur="window.scrollTo(0,0)" />
           </div>
         </div>
         <div class="qc-source-tabs">
@@ -795,7 +798,7 @@
         <div class="amount-row">
           <span class="amount-label" id="amountLabel">轉換金額 (AUD)</span>
           <div class="amount-box">
-            <input class="amount-input" id="amountInput" type="number" value="520" oninput="onAmountInput(this.value)" />
+            <input class="amount-input" id="amountInput" type="number" value="520" oninput="onAmountInput(this.value)" onblur="window.scrollTo(0,0)" />
             <span class="rate-unit" id="amountUnit">AUD</span>
           </div>
         </div>
@@ -852,12 +855,12 @@
   let audAmount = 520;
   let twdAmount = 30000;
   let autoRefresh = true;
-  let manualVisaOverride = false;
-  let botUsdMidRate = 32.770;
+  let botUsdMidRate = 32.740;
   let ratesCollapsed = false;
   let quickConvCollapsed = false;
   let qcSource = 'mid'; // 'mid' | 'visa' | 'bot' | 'cba'
-  let qcLastEdited = 'AUD';
+  let qcSwapped = false; // false: 左 AUD 右 TWD | true: 左 TWD 右 AUD
+  let qcSwapDeg = 0;
   let expandedCards = new Set();
 
   const REFRESH_INTERVAL_MS = 60000;
@@ -877,6 +880,18 @@
   const MAX_WITHDRAW_TWD = 30;
   const TRC20_GAS_USDT = 1.0;
   const VISA_SPREAD = 0.0021;
+
+  function setRateDisplay(id, valStr) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = valStr;
+  }
+
+  function getRateValue(id, fallback) {
+    const el = document.getElementById(id);
+    if (!el) return fallback;
+    const v = parseFloat(el.textContent);
+    return isNaN(v) ? fallback : v;
+  }
 
   function getRemainingSeconds() {
     const rem = Math.ceil((nextSyncTime - Date.now()) / 1000);
@@ -925,6 +940,52 @@
     return { rate: r.botAud, label: '(市場匯率中間價)' };
   }
 
+  function updateQcBanner() {
+    const { rate, label } = getQcActiveRate();
+    if (!qcSwapped) {
+      document.getElementById('qcRateText').textContent = `1 AUD = ${rate.toFixed(4)} TWD`;
+    } else {
+      const inv = rate > 0 ? (1 / rate) : 0;
+      document.getElementById('qcRateText').textContent = `1 TWD = ${inv.toFixed(5)} AUD`;
+    }
+    document.getElementById('qcRateLabel').textContent = label;
+  }
+
+  // 點擊中間 ⇄ 按鈕：左右兩個幣別欄位與數值直接對調交換
+  function swapQuickConv() {
+    qcSwapped = !qcSwapped;
+    qcSwapDeg += 180;
+    const btn = document.getElementById('qcSwapBtn');
+    if (btn) btn.style.transform = `rotate(${qcSwapDeg}deg)`;
+
+    const leftTitle = document.getElementById('qcLeftTitle');
+    const leftSym = document.getElementById('qcLeftSymbol');
+    const rightTitle = document.getElementById('qcRightTitle');
+    const rightSym = document.getElementById('qcRightSymbol');
+    const leftInput = document.getElementById('qcLeftInput');
+    const rightInput = document.getElementById('qcRightInput');
+
+    if (!qcSwapped) {
+      leftTitle.textContent = 'AUD 澳幣';
+      leftSym.textContent = 'A$';
+      rightTitle.textContent = 'TWD 新台幣';
+      rightSym.textContent = 'NT$';
+    } else {
+      leftTitle.textContent = 'TWD 新台幣';
+      leftSym.textContent = 'NT$';
+      rightTitle.textContent = 'AUD 澳幣';
+      rightSym.textContent = 'A$';
+    }
+
+    // 將左右兩格目前的數值直接互換位置
+    const tempVal = leftInput.value;
+    leftInput.value = rightInput.value;
+    rightInput.value = tempVal;
+
+    updateQcBanner();
+    onQcLeftChange(leftInput.value);
+  }
+
   function setQcSource(src) {
     qcSource = src;
     ['mid', 'visa', 'bot', 'cba'].forEach(k => {
@@ -933,34 +994,40 @@
     syncQuickConv();
   }
 
-  function onQcAudChange(val) {
-    qcLastEdited = 'AUD';
-    const aud = parseFloat(val) || 0;
-    const { rate, label } = getQcActiveRate();
-    document.getElementById('qcRateText').textContent = `1 AUD = ${rate.toFixed(4)} TWD`;
-    document.getElementById('qcRateLabel').textContent = label;
-    document.getElementById('qcTwdInput').value = (aud * rate).toFixed(2);
+  function onQcLeftChange(val) {
+    const leftVal = parseFloat(val) || 0;
+    const { rate } = getQcActiveRate();
+    updateQcBanner();
+    if (!qcSwapped) {
+      // 左 AUD -> 右 TWD
+      document.getElementById('qcRightInput').value = (leftVal * rate).toFixed(2);
+    } else {
+      // 左 TWD -> 右 AUD
+      document.getElementById('qcRightInput').value = rate > 0 ? (leftVal / rate).toFixed(2) : '0';
+    }
   }
 
-  function onQcTwdChange(val) {
-    qcLastEdited = 'TWD';
-    const twd = parseFloat(val) || 0;
-    const { rate, label } = getQcActiveRate();
-    document.getElementById('qcRateText').textContent = `1 AUD = ${rate.toFixed(4)} TWD`;
-    document.getElementById('qcRateLabel').textContent = label;
-    document.getElementById('qcAudInput').value = rate > 0 ? (twd / rate).toFixed(2) : '0';
+  function onQcRightChange(val) {
+    const rightVal = parseFloat(val) || 0;
+    const { rate } = getQcActiveRate();
+    updateQcBanner();
+    if (!qcSwapped) {
+      // 右 TWD -> 左 AUD
+      document.getElementById('qcLeftInput').value = rate > 0 ? (rightVal / rate).toFixed(2) : '0';
+    } else {
+      // 右 AUD -> 左 TWD
+      document.getElementById('qcLeftInput').value = (rightVal * rate).toFixed(2);
+    }
   }
 
   function syncQuickConv() {
-    const { rate, label } = getQcActiveRate();
-    document.getElementById('qcRateText').textContent = `1 AUD = ${rate.toFixed(4)} TWD`;
-    document.getElementById('qcRateLabel').textContent = label;
-    if (qcLastEdited === 'AUD') {
-      const aud = parseFloat(document.getElementById('qcAudInput').value) || 0;
-      document.getElementById('qcTwdInput').value = (aud * rate).toFixed(2);
+    updateQcBanner();
+    const leftVal = parseFloat(document.getElementById('qcLeftInput').value) || 0;
+    const { rate } = getQcActiveRate();
+    if (!qcSwapped) {
+      document.getElementById('qcRightInput').value = (leftVal * rate).toFixed(2);
     } else {
-      const twd = parseFloat(document.getElementById('qcTwdInput').value) || 0;
-      document.getElementById('qcAudInput').value = rate > 0 ? (twd / rate).toFixed(2) : '0';
+      document.getElementById('qcRightInput').value = rate > 0 ? (leftVal / rate).toFixed(2) : '0';
     }
   }
 
@@ -1055,14 +1122,14 @@
   }
 
   function getRates() {
-    const botAud = parseFloat(document.getElementById('rateBotAud').value) || 22.8118;
-    const visa = parseFloat(document.getElementById('rateVisa').value) || (botAud * (1 - VISA_SPREAD));
-    const cbaAudTwd = parseFloat(document.getElementById('rateCbaAudTwd').value) || 22.1200;
-    const botAudBuy = parseFloat(document.getElementById('rateBotAudBuy').value) || 22.6200;
-    const cs = parseFloat(document.getElementById('rateCs').value) || 1.4409;
-    const max = parseFloat(document.getElementById('rateMax').value) || 32.8500;
-    const wiseAudUsd = parseFloat(document.getElementById('rateWiseAudUsd').value) || 0.6964;
-    const botUsdBuy = parseFloat(document.getElementById('rateBotUsdBuy').value) || 32.720;
+    const botAud = getRateValue('rateBotAud', 22.4975);
+    const visa = getRateValue('rateVisa', 22.7644);
+    const cbaAudTwd = getRateValue('rateCbaAudTwd', 21.8158);
+    const botAudBuy = getRateValue('rateBotAudBuy', 22.3250);
+    const cs = getRateValue('rateCs', 1.4600);
+    const max = getRateValue('rateMax', 32.8260);
+    const wiseAudUsd = getRateValue('rateWiseAudUsd', 0.6873);
+    const botUsdBuy = getRateValue('rateBotUsdBuy', 32.690);
     const usdSpreadPerDollar = Math.max(0.05, botUsdMidRate - botUsdBuy);
     return { botAud, visa, cbaAudTwd, botAudBuy, cs, max, wiseAudUsd, botUsdBuy, usdSpreadPerDollar };
   }
@@ -1178,8 +1245,7 @@
     ];
   }
 
-  function recalc(isVisaManual = false) {
-    if (isVisaManual) manualVisaOverride = true;
+  function recalc() {
     syncQuickConv();
     const r = getRates();
     const list = mode === 'AUD_TO_TWD' ? calcAudToTwd(audAmount, r) : calcTwdToAud(twdAmount, r);
@@ -1288,32 +1354,29 @@
         const twd = fxAudRes.value.rates.TWD;
         const usd = fxAudRes.value.rates.USD;
         if (twd) {
-          document.getElementById('rateBotAud').value = twd.toFixed(4);
-          document.getElementById('rateBotAudBuy').value = (twd - 0.19).toFixed(4);
-          if (!manualVisaOverride) {
-            document.getElementById('rateVisa').value = (twd * (1 - VISA_SPREAD)).toFixed(4);
-          }
+          setRateDisplay('rateBotAud', twd.toFixed(4));
+          setRateDisplay('rateBotAudBuy', (twd - 0.19).toFixed(4));
+          setRateDisplay('rateVisa', (twd * (1 - VISA_SPREAD)).toFixed(4));
         }
         if (usd) {
-          document.getElementById('rateWiseAudUsd').value = usd.toFixed(4);
+          setRateDisplay('rateWiseAudUsd', usd.toFixed(4));
         }
       }
-      // 若瀏覽器成功直連 CommBank 官方 JSON
       if (cbaRes.status === 'fulfilled' && cbaRes.value?.currencies) {
         const twdObj = cbaRes.value.currencies.find(c => c.currencyTitle === 'TWD' || c.code === 'TWD');
         if (twdObj) {
           const cbaVal = parseFloat(twdObj.imtRate || twdObj.sellTT || twdObj.rate);
-          if (cbaVal > 0) document.getElementById('rateCbaAudTwd').value = cbaVal.toFixed(4);
+          if (cbaVal > 0) setRateDisplay('rateCbaAudTwd', cbaVal.toFixed(4));
         }
       }
       if (fxUsdRes.status === 'fulfilled' && fxUsdRes.value?.rates?.TWD) {
         botUsdMidRate = fxUsdRes.value.rates.TWD;
         const botUsd = botUsdMidRate - 0.05;
-        document.getElementById('rateBotUsdBuy').value = botUsd.toFixed(3);
+        setRateDisplay('rateBotUsdBuy', botUsd.toFixed(3));
       }
       if (cgRes.status === 'fulfilled' && cgRes.value?.tether) {
-        if (cgRes.value.tether.aud) document.getElementById('rateCs').value = cgRes.value.tether.aud.toFixed(4);
-        if (cgRes.value.tether.twd) document.getElementById('rateMax').value = cgRes.value.tether.twd.toFixed(4);
+        if (cgRes.value.tether.aud) setRateDisplay('rateCs', cgRes.value.tether.aud.toFixed(4));
+        if (cgRes.value.tether.twd) setRateDisplay('rateMax', cgRes.value.tether.twd.toFixed(4));
       }
       const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
       document.getElementById('statusText').textContent = `即時報價 · 更新於 ${now}`;
@@ -1328,24 +1391,22 @@
   window.__updateNativeRates = function(payload) {
     if (!payload) return;
     if (payload.midAudTwd) {
-      document.getElementById('rateBotAud').value = Number(payload.midAudTwd).toFixed(4);
-      if (!manualVisaOverride) {
-        if (payload.visaAudTwd) {
-          document.getElementById('rateVisa').value = Number(payload.visaAudTwd).toFixed(4);
-        } else {
-          document.getElementById('rateVisa').value = (Number(payload.midAudTwd) * (1 - VISA_SPREAD)).toFixed(4);
-        }
+      setRateDisplay('rateBotAud', Number(payload.midAudTwd).toFixed(4));
+      if (payload.visaAudTwd) {
+        setRateDisplay('rateVisa', Number(payload.visaAudTwd).toFixed(4));
+      } else {
+        setRateDisplay('rateVisa', (Number(payload.midAudTwd) * (1 - VISA_SPREAD)).toFixed(4));
       }
-      if (payload.botAudBuy) document.getElementById('rateBotAudBuy').value = Number(payload.botAudBuy).toFixed(4);
+      if (payload.botAudBuy) setRateDisplay('rateBotAudBuy', Number(payload.botAudBuy).toFixed(4));
     }
     if (payload.cbaAudTwd) {
-      document.getElementById('rateCbaAudTwd').value = Number(payload.cbaAudTwd).toFixed(4);
+      setRateDisplay('rateCbaAudTwd', Number(payload.cbaAudTwd).toFixed(4));
     }
     if (payload.botUsdMid) botUsdMidRate = Number(payload.botUsdMid);
-    if (payload.botUsdTwdBuy) document.getElementById('rateBotUsdBuy').value = Number(payload.botUsdTwdBuy).toFixed(3);
-    if (payload.wiseAudUsd) document.getElementById('rateWiseAudUsd').value = Number(payload.wiseAudUsd).toFixed(4);
-    if (payload.csUsdtAud) document.getElementById('rateCs').value = Number(payload.csUsdtAud).toFixed(4);
-    if (payload.maxUsdtTwd) document.getElementById('rateMax').value = Number(payload.maxUsdtTwd).toFixed(4);
+    if (payload.botUsdTwdBuy) setRateDisplay('rateBotUsdBuy', Number(payload.botUsdTwdBuy).toFixed(3));
+    if (payload.wiseAudUsd) setRateDisplay('rateWiseAudUsd', Number(payload.wiseAudUsd).toFixed(4));
+    if (payload.csUsdtAud) setRateDisplay('rateCs', Number(payload.csUsdtAud).toFixed(4));
+    if (payload.maxUsdtTwd) setRateDisplay('rateMax', Number(payload.maxUsdtTwd).toFixed(4));
     const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
     document.getElementById('statusText').textContent = `台銀/CBA/Visa/MAX直連 · ${now}`;
     recalc();
