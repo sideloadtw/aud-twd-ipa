@@ -1209,7 +1209,7 @@
     const wiseConvertFeeAud = wiseAud - audNetNeeded;
 
     const intermediaryLossTwd = INTERMEDIARY_USD * r.botUsdBuy;
-    const twdGrossNeeded = twd + BOT_OUTWARD_CABLE_TWD + intermediaryLossTwd;
+    const twdGrossNeeded = twd + TW_BANK_INWARD_TWD + intermediaryLossTwd;
     const bankWireAud = twdGrossNeeded / r.botAudBuy + CBA_OUTWARD_AUD;
     const bankWireSpreadLossTwd = Math.max(0, (bankWireAud - CBA_OUTWARD_AUD) * (r.botAud - r.botAudBuy));
 
@@ -1240,7 +1240,7 @@
         name: 'CommBank ⇄ 台銀直匯',
         val: bankWireAud,
         eff: twd / bankWireAud,
-        feeDetail: `• 台銀匯出郵電費：NT$${BOT_OUTWARD_CABLE_TWD} / CBA 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 銀行牌告匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
+        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD / 台銀解匯費：NT$${TW_BANK_INWARD_TWD}<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 銀行牌告匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
       }
     ];
   }
@@ -1342,6 +1342,7 @@
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fetchNativeRates) {
         window.webkit.messageHandlers.fetchNativeRates.postMessage({});
+        return;
       }
       const [fxAudRes, fxUsdRes, cgRes, cbaRes] = await Promise.allSettled([
         fetch('https://open.er-api.com/v6/latest/AUD').then(r => r.json()),
@@ -1409,6 +1410,7 @@
     if (payload.maxUsdtTwd) setRateDisplay('rateMax', Number(payload.maxUsdtTwd).toFixed(4));
     const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
     document.getElementById('statusText').textContent = `台銀/CBA/Visa/MAX直連 · ${now}`;
+    document.getElementById('syncBtn').textContent = '立即更新';
     recalc();
   };
 
