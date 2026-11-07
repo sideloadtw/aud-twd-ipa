@@ -266,14 +266,14 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>CFBundleDevelopmentRegion</key><string>zh_TW</string>
-            <key>CFBundleDisplayName</key><string>Sideload匯兌</string>
+            <key>CFBundleDisplayName</key><string>AUD⇄TWD</string>
             <key>CFBundleExecutable</key><string>AUDTWDPro</string>
             <key>CFBundleIdentifier</key><string>com.sideloadtw.audtwdpro</string>
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>9.0.0</string>
-            <key>CFBundleVersion</key><string>9</string>
+            <key>CFBundleShortVersionString</key><string>10.0.0</string>
+            <key>CFBundleVersion</key><string>10</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
