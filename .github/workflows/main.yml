@@ -7,11 +7,7 @@ on:
 
 jobs:
   build-ipa:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-15, macos-13]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -58,7 +54,60 @@ jobs:
                   var csUsdtAud: Double? = nil
                   var maxUsdtTwd: Double? = nil
                   var cbaAudTwd: Double? = nil
+                  var visaAudTwd: Double? = nil
 
+                  // 0. 直連 Visa 官方匯率轉換器 API (visa.com.tw, 0% 銀行手續費, TWD -> AUD)
+                  let df = DateFormatter()
+                  df.dateFormat = "MM/dd/yyyy"
+                  let dateStr = df.string(from: Date()).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "11%2F07%2F2026"
+                  if let visaUrl = URL(string: "https://www.visa.com.tw/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=\(dateStr)&exchangedate=\(dateStr)&fromCurr=TWD&toCurr=AUD") {
+                      group.enter()
+                      var req = URLRequest(url: visaUrl)
+                      req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+                      req.setValue("https://www.visa.com.tw/", forHTTPHeaderField: "Referer")
+                      URLSession.shared.dataTask(with: req) { data, _, _ in
+                          defer { group.leave() }
+                          if let data = data,
+                             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                             let orig = json["originalValues"] as? [String: Any] {
+                              if let rateStr = orig["fxRateWithAdditionalFee"] as? String, let r = Double(rateStr), r > 0 {
+                                  let audToTwd = r < 1.0 ? (1.0 / r) : r
+                                  visaAudTwd = (audToTwd * 10000).rounded() / 10000
+                              } else if let rateNum = orig["fxRateVisa"] as? Double, rateNum > 0 {
+                                  let audToTwd = rateNum < 1.0 ? (1.0 / rateNum) : rateNum
+                                  visaAudTwd = (audToTwd * 10000).rounded() / 10000
+                              }
+                          }
+                      }.resume()
+                  }
+
+                  // 1. 直連澳洲 CommBank 官方外匯牌告 JSON API (commbank.com.au)
+                  if let cbaUrl = URL(string: "https://www.commbank.com.au/content/data/forex-rates/AUD.json") {
+                      group.enter()
+                      var req = URLRequest(url: cbaUrl)
+                      req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+                      URLSession.shared.dataTask(with: req) { data, _, _ in
+                          defer { group.leave() }
+                          if let data = data,
+                             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                             let list = json["currencies"] as? [[String: Any]] {
+                              for item in list {
+                                  let code = (item["currencyTitle"] as? String) ?? (item["code"] as? String) ?? ""
+                                  if code == "TWD" {
+                                      if let imtStr = (item["imtRate"] as? String) ?? (item["sellTT"] as? String) ?? (item["rate"] as? String),
+                                         let val = Double(imtStr), val > 0 {
+                                          cbaAudTwd = (val * 10000).rounded() / 10000
+                                      } else if let valNum = (item["imtRate"] as? Double) ?? (item["sellTT"] as? Double) ?? (item["rate"] as? Double), valNum > 0 {
+                                          cbaAudTwd = (valNum * 10000).rounded() / 10000
+                                      }
+                                      break
+                                  }
+                              }
+                          }
+                      }.resume()
+                  }
+
+                  // 2. 直連台灣銀行官方牌告匯率 CSV
                   if let botUrl = URL(string: "https://rate.bot.com.tw/xrt/flcsv/0/day") {
                       group.enter()
                       URLSession.shared.dataTask(with: botUrl) { data, _, _ in
@@ -70,7 +119,9 @@ jobs:
                                       if cols[0] == "AUD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           midAudTwd = ((b + s) / 2.0 * 10000).rounded() / 10000
                                           botAudBuy = (b * 10000).rounded() / 10000
-                                          cbaAudTwd = (((b + s) / 2.0 * (1.0 - 0.031)) * 10000).rounded() / 10000
+                                          if cbaAudTwd == nil {
+                                              cbaAudTwd = (((b + s) / 2.0 * (1.0 - 0.0303)) * 10000).rounded() / 10000
+                                          }
                                       }
                                       if cols[0] == "USD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
                                           botUsdTwdBuy = (b * 1000).rounded() / 1000
@@ -82,6 +133,7 @@ jobs:
                       }.resume()
                   }
 
+                  // 3. 國際外匯與 Wise AUD/USD
                   if let fxUrl = URL(string: "https://open.er-api.com/v6/latest/AUD") {
                       group.enter()
                       URLSession.shared.dataTask(with: fxUrl) { data, _, _ in
@@ -92,13 +144,13 @@ jobs:
                               if midAudTwd == nil, let twd = rates["TWD"] as? Double {
                                   midAudTwd = (twd * 10000).rounded() / 10000
                                   botAudBuy = ((twd - 0.19) * 10000).rounded() / 10000
-                                  cbaAudTwd = ((twd * (1.0 - 0.031)) * 10000).rounded() / 10000
                               }
                               if let usd = rates["USD"] as? Double { wiseAudUsd = (usd * 10000).rounded() / 10000 }
                           }
                       }.resume()
                   }
 
+                  // 4. CoinSpot 官方 API
                   if let csUrl = URL(string: "https://www.coinspot.com.au/pubapi/v2/latest") {
                       group.enter()
                       URLSession.shared.dataTask(with: csUrl) { data, _, _ in
@@ -112,6 +164,7 @@ jobs:
                       }.resume()
                   }
 
+                  // 5. 台灣 MAX 官方 API
                   if let maxUrl = URL(string: "https://max-api.maicoin.com/api/v2/tickers/usdttwd") {
                       group.enter()
                       URLSession.shared.dataTask(with: maxUrl) { data, _, _ in
@@ -126,6 +179,7 @@ jobs:
                   group.notify(queue: .main) { [weak self] in
                       var dict: [String: Double] = [:]
                       if let m = midAudTwd { dict["midAudTwd"] = m }
+                      if let v = visaAudTwd { dict["visaAudTwd"] = v }
                       if let b = botAudBuy { dict["botAudBuy"] = b }
                       if let c = cbaAudTwd { dict["cbaAudTwd"] = c }
                       if let u = botUsdTwdBuy { dict["botUsdTwdBuy"] = u }
@@ -218,8 +272,8 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>7.0.0</string>
-            <key>CFBundleVersion</key><string>7</string>
+            <key>CFBundleShortVersionString</key><string>9.0.0</string>
+            <key>CFBundleVersion</key><string>9</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
@@ -249,5 +303,5 @@ jobs:
       - name: Upload Unsigned IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SideloadTW-AUD-TWD-Pro-IPA-${{ matrix.os }}
+          name: SideloadTW-AUD-TWD-Pro-IPA
           path: SideloadTW-AUD-TWD-Pro.ipa
