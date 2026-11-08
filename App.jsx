@@ -1,3 +1,5 @@
+// 注意：此檔案為未使用的原型（prototype），正式版 App 打包的是 index.html，
+// 請勿直接修改此檔案來修正正式版行為；所有正式邏輯請改 index.html。
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   RefreshCw,
@@ -104,12 +106,15 @@ export default function App() {
         maxUsdtTwd: updatedMax
       }));
 
-      const now = new Date();
-      setLastUpdated(
-        now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      );
       if (sourceParts.length > 0) {
+        const now = new Date();
+        setLastUpdated(
+          now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        );
         setDataSourceLabel(sourceParts.join(' + '));
+      } else {
+        // 全部來源皆失敗：不更新時間戳，明確標示同步失敗（顯示上次數據）
+        setDataSourceLabel('同步失敗（顯示上次數據）');
       }
       setCountdown(30);
     } catch (err) {
@@ -123,6 +128,12 @@ export default function App() {
   useEffect(() => {
     window.__updateNativeRates = (payload) => {
       if (!payload) return;
+      const hasRate = payload.midAudTwd || payload.csUsdtAud || payload.maxUsdtTwd;
+      if (!hasRate) {
+        // 原生端未帶回任何匯率：不更新時間戳，明確標示同步失敗
+        setDataSourceLabel('同步失敗（顯示上次數據）');
+        return;
+      }
       setRates((prev) => ({
         ...prev,
         midAudTwd: payload.midAudTwd || prev.midAudTwd,
@@ -161,7 +172,7 @@ export default function App() {
     (audAmount) => {
       const midTwd = audAmount * rates.midAudTwd;
 
-      // 1. ING 台灣免設備費 ATM 直領 (0% 海外手續費 + 0 元台銀/國泰/元大 ATM 設備費)
+      // 1. ING 台灣 ATM 提領 (0% 海外手續費 + 國泰世華多為 $0，其餘以 ATM 顯示為準)
       const ingNetTwd = audAmount * visaRate;
       const ingEffRate = audAmount > 0 ? ingNetTwd / audAmount : 0;
       const ingLossTwd = midTwd - ingNetTwd;
@@ -185,8 +196,8 @@ export default function App() {
       const methods = [
         {
           id: 'ing_free_atm',
-          name: 'ING 免設備費 ATM 直領',
-          badge: '台銀/國泰/元大 $0 設備費',
+          name: 'ING 台灣 ATM 提領',
+          badge: '國泰世華多為 $0，其餘以 ATM 顯示為準',
           primaryValue: ingNetTwd,
           effRate: ingEffRate,
           lossTwd: ingLossTwd,
@@ -236,7 +247,7 @@ export default function App() {
     (targetTwd) => {
       const midAud = targetTwd / rates.midAudTwd;
 
-      // 1. ING 免設備費 ATM 直領所需 AUD
+      // 1. ING 台灣 ATM 提領所需 AUD
       const ingReqAud = targetTwd / visaRate;
       const ingEffRate = ingReqAud > 0 ? targetTwd / ingReqAud : 0;
       const ingExtraAud = ingReqAud - midAud;
@@ -256,8 +267,8 @@ export default function App() {
       const methods = [
         {
           id: 'ing_free_atm',
-          name: 'ING 免設備費 ATM 直領',
-          badge: '台銀/國泰/元大 $0 設備費',
+          name: 'ING 台灣 ATM 提領',
+          badge: '國泰世華多為 $0，其餘以 ATM 顯示為準',
           primaryValue: ingReqAud,
           effRate: ingEffRate,
           lossTwd: ingExtraAud * rates.midAudTwd,
@@ -308,7 +319,7 @@ export default function App() {
     return mode === 'AUD_TO_TWD' ? calcFromAud(audInput) : calcFromTwd(twdInput);
   }, [mode, audInput, twdInput, calcFromAud, calcFromTwd]);
 
-  // 計算黃金交叉點 (Breakeven Point)：何時 CoinSpot 0.1% 開始贏過 ING 免設備費 ATM
+  // 計算黃金交叉點 (Breakeven Point)：何時 CoinSpot 0.1% 開始贏過 ING 台灣 ATM
   const breakevenInfo = useMemo(() => {
     const slopeCrypto = (0.999 / rates.csUsdtAud) * rates.maxUsdtTwd * (1 - maxTradeFeePct / 100);
     const fixedCostTwd = trc20GasUsdt * rates.maxUsdtTwd * (1 - maxTradeFeePct / 100) + maxWithdrawalFee;
@@ -317,7 +328,7 @@ export default function App() {
     if (rateDiff <= 0) {
       return {
         hasCross: false,
-        message: '當前匯率下，不論金額大小皆由「ING 免設備費 ATM 直領」勝出'
+        message: '當前匯率下，不論金額大小皆由「ING 台灣 ATM 提領」勝出'
       };
     }
     const crossAud = Math.ceil(fixedCostTwd / rateDiff);
@@ -384,7 +395,7 @@ export default function App() {
                   AUD ⇄ TWD 匯兌精算 Pro
                 </h1>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  免設備費 ATM 專版
+                  台灣 ATM 提領專版
                 </span>
               </div>
               <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -724,7 +735,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <h3 className="text-sm sm:text-base font-bold text-white">
-                三大方案即時精算對比表（免設備費 ATM vs CoinSpot 轉 MAX）
+                三大方案即時精算對比表（台灣 ATM 提領 vs CoinSpot 轉 MAX）
               </h3>
             </div>
             <span className="text-xs text-slate-400">
@@ -827,7 +838,7 @@ export default function App() {
                   <th className="py-2.5 px-4">
                     {mode === 'AUD_TO_TWD' ? '轉換澳幣 (AUD)' : '目標台幣 (TWD)'}
                   </th>
-                  <th className="py-2.5 px-4 text-right">ING 免設備費 ATM</th>
+                  <th className="py-2.5 px-4 text-right">ING 台灣 ATM</th>
                   <th className="py-2.5 px-4 text-right">CoinSpot 0.1% 掛單</th>
                   <th className="py-2.5 px-4 text-right">CoinSpot 1.0% 一鍵買</th>
                   <th className="py-2.5 px-4 text-right">勝出方案與差額</th>

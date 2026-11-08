@@ -630,6 +630,21 @@
   .cell-win .unit-tag {
     color: var(--gold);
   }
+  #statusText.sync-fail {
+    color: var(--danger);
+  }
+  .source-note {
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 0 2px;
+    line-height: 1.5;
+  }
+  .version-tag {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 2px 0 4px;
+  }
 </style>
 </head>
 <body>
@@ -674,10 +689,10 @@
         <div class="rate-card">
           <div class="rate-label">
             <span>ING Visa 匯率</span>
-            <span class="tag">官方API</span>
+            <span class="tag" id="tagVisa">估算</span>
           </div>
           <div class="rate-val-wrap">
-            <span class="rate-val" id="rateVisa">22.7644</span>
+            <span class="rate-val" id="rateVisa">22.4503</span>
             <span class="rate-unit">TWD</span>
           </div>
         </div>
@@ -685,7 +700,7 @@
         <div class="rate-card">
           <div class="rate-label">
             <span>CommBank 匯率</span>
-            <span class="tag">官方爬蟲</span>
+            <span class="tag" id="tagCba">估算</span>
           </div>
           <div class="rate-val-wrap">
             <span class="rate-val" id="rateCbaAudTwd">21.8158</span>
@@ -728,12 +743,12 @@
 
         <div class="rate-card">
           <div class="rate-label">
-            <span>Wise AUD/USD</span>
-            <span class="tag">美金</span>
+            <span>Wise AUD→TWD</span>
+            <span class="tag" id="tagWise">估算</span>
           </div>
           <div class="rate-val-wrap">
-            <span class="rate-val" id="rateWiseAudUsd">0.6873</span>
-            <span class="rate-unit">USD</span>
+            <span class="rate-val" id="rateWiseAudTwd">22.5118</span>
+            <span class="rate-unit">TWD</span>
           </div>
         </div>
 
@@ -748,6 +763,7 @@
           </div>
         </div>
       </section>
+      <div class="source-note" id="sourceNote">資料來源：台銀 / Visa / CoinSpot / MAX / Wise · 尚未同步</div>
 
       <!-- 獨立即時匯率快速換算器 (點擊中間 ⇄ 按鈕可左右對調交換) -->
       <div class="section-bar">
@@ -813,7 +829,7 @@
         <div class="winner-top">
           <div>
             <div class="winner-badge">✦ 最優方案</div>
-            <div class="winner-name" id="winnerName">ING 免設備費 ATM</div>
+            <div class="winner-name" id="winnerName">ING 台灣 ATM 提領</div>
           </div>
           <div class="winner-val" id="winnerVal">NT$ 11,837</div>
         </div>
@@ -846,6 +862,7 @@
         </div>
         <div id="matrixBody"></div>
       </section>
+      <div class="version-tag">AUD⇄TWD v10.0.1</div>
     </main>
   </div>
 </div>
@@ -868,18 +885,88 @@
 
   const CBA_OUTWARD_AUD = 6.00;
   const INTERMEDIARY_USD = 20.00;
-  const TW_BANK_INWARD_TWD = 200;
-  const BOT_OUTWARD_CABLE_TWD = 400;
 
-  const WISE_DEPOSIT_FEE_AUD = 0.00;
-  const WISE_CONVERT_FEE_PCT = 0.0048;
-  const WISE_WIRE_FEE_AUD = 1.58;
-  const WISE_SWIFT_OUT_USD = 3.80;
+  // 台銀匯入匯款手續費：按入帳台幣金額 0.05%，最低 NT$200、最高 NT$800
+  function botInwardFee(twdGross) {
+    return Math.max(200, Math.min(800, twdGross * 0.0005));
+  }
 
-  const MAX_TRADE_FEE = 0.0008;
+  // Wise 直接 AUD→TWD 即時報價參數（Wise 官方 price API，OSKO → 台灣銀行轉帳）
+  let wiseDirect = null; // { midRate, flatFee, varPct, live }，無即時報價時為 null
+  // 同步失敗時的備援估算模型：費率取自 2026-11-08 Wise 公開報價，僅供估算，不得假裝是即時報價
+  const WISE_FEE_MODEL = { flatFee: 2.27, varPct: 0.0078, asOf: '2026-11-08' };
+  let visaLive = false; // Visa 官方 API 是否成功回傳（否則以中價 × (1 - 0.21%) 估算）
+  let cbaEstimated = true; // CommBank 無 TWD 電匯牌告，顯示值一律為估算
+  let csLive = false; // CoinSpot ask 是否來自官方 API（否則為 CoinGecko 估算）
+  let maxLive = false; // MAX bid 是否來自官方 API（否則為 CoinGecko 估算）
+  let erApiUpdatedAt = null; // ER-API time_last_update_utc
+  let lastOkSyncAt = null; // 上次至少一個來源同步成功的時間
+  let nativePending = false; // 是否在等待 iOS 原生回傳
+
+  const ING_DAILY_LIMIT_AUD = 2200;
+
+  const MAX_TRADE_FEE = 0.0008; // MAX 掛單（maker）0.08%，市價單（taker）為 0.16%
   const MAX_WITHDRAW_TWD = 30;
   const TRC20_GAS_USDT = 1.0;
   const VISA_SPREAD = 0.0021;
+
+  function setTag(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function setStatusOk(text) {
+    const el = document.getElementById('statusText');
+    if (!el) return;
+    el.classList.remove('sync-fail');
+    el.textContent = text;
+  }
+
+  function setStatusFail() {
+    const el = document.getElementById('statusText');
+    if (!el) return;
+    el.classList.add('sync-fail');
+    el.textContent = lastOkSyncAt
+      ? `同步失敗，顯示上次數據（${lastOkSyncAt}）`
+      : '無法更新匯率，請檢查網路';
+  }
+
+  function updateSourceNote() {
+    const el = document.getElementById('sourceNote');
+    if (!el) return;
+    const parts = [];
+    parts.push(erApiUpdatedAt
+      ? `外匯中價 ER-API 更新於 ${erApiUpdatedAt}（每日更新）`
+      : '外匯中價：台銀牌告直連');
+    parts.push(wiseDirect
+      ? 'Wise：官方即時報價（直接 AUD→TWD）'
+      : 'Wise：估算（費率模型 2026-11-08，以 App 內即時報價為準）');
+    parts.push((csLive && maxLive)
+      ? 'CoinSpot／MAX：官方直連'
+      : 'CoinSpot／MAX：網頁版為 CoinGecko 估算值，以 App 內為準');
+    el.textContent = parts.join(' · ');
+  }
+
+  function pickWiseOption(options) {
+    if (!Array.isArray(options)) return null;
+    return options.find(o => o.payInMethod === 'OSKO' && o.payOutMethod === 'BANK_TRANSFER')
+      || options.find(o => o.payOutMethod === 'BANK_TRANSFER')
+      || options[0] || null;
+  }
+
+  function wiseSourceLabel() {
+    return wiseDirect ? 'Wise 官方即時報價' : '估算（費率模型 2026-11-08）';
+  }
+
+  // Wise 直接 AUD→TWD：手續費 = 固定費 + 金額 × 變動費率（參數來自即時報價，無報價時用備援模型）
+  function wiseFeeAud(aud) {
+    const p = wiseDirect || WISE_FEE_MODEL;
+    return p.flatFee + aud * p.varPct;
+  }
+
+  function wiseTargetTwd(aud, midRate) {
+    return Math.max(0, aud - wiseFeeAud(aud)) * midRate;
+  }
 
   function setRateDisplay(id, valStr) {
     const el = document.getElementById(id);
@@ -934,9 +1021,9 @@
 
   function getQcActiveRate() {
     const r = getRates();
-    if (qcSource === 'visa') return { rate: r.visa, label: '(Visa 官方即期匯率)' };
+    if (qcSource === 'visa') return { rate: r.visa, label: visaLive ? '(Visa 官方即期匯率)' : '(Visa 匯率估算）' };
     if (qcSource === 'bot') return { rate: r.botAudBuy, label: '(台灣銀行即期買入)' };
-    if (qcSource === 'cba') return { rate: r.cbaAudTwd, label: '(CommBank 牌告匯率)' };
+    if (qcSource === 'cba') return { rate: r.cbaAudTwd, label: '(CommBank 現金牌告估算）' };
     return { rate: r.botAud, label: '(市場匯率中間價)' };
   }
 
@@ -1123,15 +1210,16 @@
 
   function getRates() {
     const botAud = getRateValue('rateBotAud', 22.4975);
-    const visa = getRateValue('rateVisa', 22.7644);
+    const visa = getRateValue('rateVisa', 22.4503);
     const cbaAudTwd = getRateValue('rateCbaAudTwd', 21.8158);
     const botAudBuy = getRateValue('rateBotAudBuy', 22.3250);
     const cs = getRateValue('rateCs', 1.4600);
     const max = getRateValue('rateMax', 32.8260);
-    const wiseAudUsd = getRateValue('rateWiseAudUsd', 0.6873);
     const botUsdBuy = getRateValue('rateBotUsdBuy', 32.690);
+    // Wise 直接 AUD→TWD 中價：有即時報價用報價，無報價時以台銀中價估算（並標示為估算）
+    const wiseMid = wiseDirect ? wiseDirect.midRate : botAud;
     const usdSpreadPerDollar = Math.max(0.05, botUsdMidRate - botUsdBuy);
-    return { botAud, visa, cbaAudTwd, botAudBuy, cs, max, wiseAudUsd, botUsdBuy, usdSpreadPerDollar };
+    return { botAud, visa, cbaAudTwd, botAudBuy, cs, max, wiseMid, botUsdBuy, usdSpreadPerDollar };
   }
 
   function calcAudToTwd(aud, r) {
@@ -1144,49 +1232,45 @@
     const cs01MaxFeeTwd = cs01UsdtArrived * r.max * MAX_TRADE_FEE;
     const cs01Net = Math.max(0, cs01UsdtArrived * r.max - cs01MaxFeeTwd - MAX_WITHDRAW_TWD);
 
-    const wiseAfterDepositAud = Math.max(0, aud - WISE_DEPOSIT_FEE_AUD);
-    const wiseConvertFeeAud = wiseAfterDepositAud * WISE_CONVERT_FEE_PCT + WISE_WIRE_FEE_AUD;
-    const wiseNetAudToConvert = Math.max(0, wiseAfterDepositAud - wiseConvertFeeAud);
-    const wiseUsdConverted = wiseNetAudToConvert * r.wiseAudUsd;
-    const wiseUsdArrivedTw = Math.max(0, wiseUsdConverted - WISE_SWIFT_OUT_USD);
-    const wiseFxSpreadLossTwd = wiseUsdArrivedTw * r.usdSpreadPerDollar;
-    const wiseGrossTwd = wiseUsdArrivedTw * r.botUsdBuy;
-    const wiseNet = Math.max(0, wiseGrossTwd - TW_BANK_INWARD_TWD);
+    // Wise 直接 AUD→TWD（OSKO 匯入 → 台灣銀行轉帳入帳）：無 USD 中轉、無 SWIFT 中轉費、無台銀解匯費
+    const wiseFee = wiseFeeAud(aud);
+    const wiseNet = wiseTargetTwd(aud, r.wiseMid);
 
     const cbaAudAfterOutward = Math.max(0, aud - CBA_OUTWARD_AUD);
     const intermediaryLossTwd = INTERMEDIARY_USD * r.botUsdBuy;
     const cbaGrossTwd = cbaAudAfterOutward * r.botAudBuy;
-    const cbaNet = Math.max(0, cbaGrossTwd - intermediaryLossTwd - TW_BANK_INWARD_TWD);
+    const cbaInwardFee = botInwardFee(cbaGrossTwd);
+    const cbaNet = Math.max(0, cbaGrossTwd - intermediaryLossTwd - cbaInwardFee);
     const cbaSpreadLossTwd = Math.max(0, cbaAudAfterOutward * (r.botAud - r.botAudBuy));
 
     return [
       {
         id: 'ing',
-        name: 'ING 免設備費 ATM',
+        name: 'ING 台灣 ATM 提領',
         val: ingNet,
         eff: ingNet / aud,
-        feeDetail: `• 海外提款手續費：$0 AUD / 台銀國泰 ATM 設備費：$0<br/>• Visa 官方即期匯率：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})`,
+        feeDetail: `• 海外提款手續費：$0 AUD / 國泰世華多為 $0，其他銀行以 ATM 螢幕顯示為準<br/>• Visa ${visaLive ? '官方即期匯率' : '匯率（估算）'}：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})${aud > ING_DAILY_LIMIT_AUD ? '<br/>• 每日提領上限 2,200 AUD，超過需分多日提領' : ''}`,
       },
       {
         id: 'cs01',
         name: 'CoinSpot 0.1% → MAX',
         val: cs01Net,
         eff: cs01Net / aud,
-        feeDetail: `• PayID 入金：$0 / CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD<br/>• TRC20 提幣：1 USDT (到帳 ${cs01UsdtArrived.toFixed(2)} U)<br/>• MAX 賣出 + 出金費：NT$${Math.round(cs01MaxFeeTwd + MAX_WITHDRAW_TWD)}`,
+        feeDetail: `• PayID 入金：$0 / CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD<br/>• TRC20 提幣：1 USDT (到帳 ${cs01UsdtArrived.toFixed(2)} U)<br/>• MAX 賣出 + 出金費：NT$${Math.round(cs01MaxFeeTwd + MAX_WITHDRAW_TWD)}（掛單 0.08%，市價單 0.16%）`,
       },
       {
         id: 'wise',
-        name: 'Wise 轉美金 → 外幣結匯',
+        name: 'Wise 直匯台幣',
         val: wiseNet,
         eff: wiseNet / aud,
-        feeDetail: `• 匯入 Wise：$0 / 換美金手續費：$${wiseConvertFeeAud.toFixed(2)} AUD<br/>• 電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD (到帳 ${wiseUsdArrivedTw.toFixed(2)} USD)<br/>• 台銀解匯 NT$${TW_BANK_INWARD_TWD} + 買入匯差約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
+        feeDetail: `• OSKO 匯入：$0 / Wise 換匯費：$${wiseFee.toFixed(2)} AUD（${wiseSourceLabel()}）<br/>• 直接 AUD→TWD 入台灣銀行帳戶，中價 ${r.wiseMid.toFixed(4)}，無 SWIFT 中轉費`,
       },
       {
         id: 'bank_wire',
         name: 'CommBank ⇄ 台銀直匯',
         val: cbaNet,
         eff: cbaNet / aud,
-        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD (CommBank 牌告 ${r.cbaAudTwd.toFixed(4)})<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 台銀解匯 NT$${TW_BANK_INWARD_TWD} + 買入匯差約 NT$${Math.round(cbaSpreadLossTwd)}`,
+        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD (CommBank 現金牌告估算 ${r.cbaAudTwd.toFixed(4)})<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 台銀解匯 NT$${cbaInwardFee} + 買入匯差約 NT$${Math.round(cbaSpreadLossTwd)}`,
       }
     ];
   }
@@ -1201,46 +1285,46 @@
     const cs01Aud = (usdtNeeded * r.cs) / 0.999;
     const cs01FeeAud = cs01Aud * 0.001;
 
-    const usdArrivedTwNeeded = (twd + TW_BANK_INWARD_TWD) / r.botUsdBuy;
-    const wiseFxSpreadLossTwd = usdArrivedTwNeeded * r.usdSpreadPerDollar;
-    const usdConvertedNeeded = usdArrivedTwNeeded + WISE_SWIFT_OUT_USD;
-    const audNetNeeded = usdConvertedNeeded / r.wiseAudUsd;
-    const wiseAud = (audNetNeeded + WISE_WIRE_FEE_AUD) / (1 - WISE_CONVERT_FEE_PCT);
-    const wiseConvertFeeAud = wiseAud - audNetNeeded;
+    // Wise 直接 AUD→TWD 的精確反推：aud = (twd / 中價 + 固定費) / (1 - 變動費率)
+    const wiseParams = wiseDirect || WISE_FEE_MODEL;
+    const wiseAud = (twd / r.wiseMid + wiseParams.flatFee) / (1 - wiseParams.varPct);
+    const wiseConvertFeeAud = wiseAud - twd / r.wiseMid;
 
     const intermediaryLossTwd = INTERMEDIARY_USD * r.botUsdBuy;
-    const twdGrossNeeded = twd + TW_BANK_INWARD_TWD + intermediaryLossTwd;
+    let cbaInwardFeeRev = botInwardFee(twd + 200 + intermediaryLossTwd);
+    cbaInwardFeeRev = botInwardFee(twd + cbaInwardFeeRev + intermediaryLossTwd);
+    const twdGrossNeeded = twd + cbaInwardFeeRev + intermediaryLossTwd;
     const bankWireAud = twdGrossNeeded / r.botAudBuy + CBA_OUTWARD_AUD;
     const bankWireSpreadLossTwd = Math.max(0, (bankWireAud - CBA_OUTWARD_AUD) * (r.botAud - r.botAudBuy));
 
     return [
       {
         id: 'ing',
-        name: 'ING 免設備費 ATM',
+        name: 'ING 台灣 ATM 提領',
         val: ingAud,
         eff: twd / ingAud,
-        feeDetail: `• 海外提款手續費：$0 AUD / 台銀國泰 ATM 設備費：$0<br/>• Visa 官方即期匯率：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})`,
+        feeDetail: `• 海外提款手續費：$0 AUD / 國泰世華多為 $0，其他銀行以 ATM 螢幕顯示為準<br/>• Visa ${visaLive ? '官方即期匯率' : '匯率（估算）'}：${r.visa.toFixed(4)} (匯差約 NT$${Math.round(ingSpreadLossTwd)})${ingAud > ING_DAILY_LIMIT_AUD ? '<br/>• 每日提領上限 2,200 AUD，超過需分多日提領' : ''}`,
       },
       {
         id: 'cs01',
         name: 'CoinSpot 0.1% → MAX',
         val: cs01Aud,
         eff: twd / cs01Aud,
-        feeDetail: `• 需買入 ${usdtNeeded.toFixed(2)} USDT 轉回台灣 MAX<br/>• CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD / 提幣：1 USDT<br/>• MAX 交易 + 出金費：NT$${Math.round(maxFeeTwd + MAX_WITHDRAW_TWD)}`,
+        feeDetail: `• 需買入 ${usdtNeeded.toFixed(2)} USDT 轉回台灣 MAX<br/>• CS 0.1% 掛單費：$${cs01FeeAud.toFixed(2)} AUD / 提幣：1 USDT<br/>• MAX 交易 + 出金費：NT$${Math.round(maxFeeTwd + MAX_WITHDRAW_TWD)}（掛單 0.08%，市價單 0.16%）`,
       },
       {
         id: 'wise',
-        name: 'Wise 轉美金 → 外幣結匯',
+        name: 'Wise 直匯台幣',
         val: wiseAud,
         eff: twd / wiseAud,
-        feeDetail: `• 台灣需到帳 ${usdArrivedTwNeeded.toFixed(2)} USD / Wise 換匯費：$${wiseConvertFeeAud.toFixed(2)} AUD<br/>• 電匯費：$${WISE_SWIFT_OUT_USD.toFixed(2)} USD + 台銀解匯 NT$${TW_BANK_INWARD_TWD}<br/>• 台銀美金買入匯差：約 NT$${Math.round(wiseFxSpreadLossTwd)}`,
+        feeDetail: `• 台灣銀行直接入帳 NT$${Math.round(twd).toLocaleString()} / Wise 換匯費：$${wiseConvertFeeAud.toFixed(2)} AUD（${wiseSourceLabel()}）<br/>• 直接 AUD→TWD，中價 ${r.wiseMid.toFixed(4)}，無 SWIFT 中轉費`,
       },
       {
         id: 'bank_wire',
         name: 'CommBank ⇄ 台銀直匯',
         val: bankWireAud,
         eff: twd / bankWireAud,
-        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD / 台銀解匯費：NT$${TW_BANK_INWARD_TWD}<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 銀行牌告匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
+        feeDetail: `• CommBank 電匯費：$${CBA_OUTWARD_AUD.toFixed(2)} AUD / 台銀解匯費：NT$${cbaInwardFeeRev}<br/>• 中轉行扣費：約 $${INTERMEDIARY_USD} USD (NT$${Math.round(intermediaryLossTwd)})<br/>• 銀行牌告匯差：約 NT$${Math.round(bankWireSpreadLossTwd)}`,
       }
     ];
   }
@@ -1248,6 +1332,10 @@
   function recalc() {
     syncQuickConv();
     const r = getRates();
+    setRateDisplay('rateWiseAudTwd', r.wiseMid.toFixed(4));
+    setTag('tagWise', wiseDirect ? '即時報價' : '估算');
+    setTag('tagVisa', visaLive ? '官方API' : '估算');
+    setTag('tagCba', '估算');
     const list = mode === 'AUD_TO_TWD' ? calcAudToTwd(audAmount, r) : calcTwdToAud(twdAmount, r);
     const sorted = [...list].sort((a, b) => mode === 'AUD_TO_TWD' ? b.val - a.val : a.val - b.val);
     const best = sorted[0];
@@ -1264,9 +1352,10 @@
     let crossText = '';
     if (slopeCs01 > r.visa) {
       const crossAud = Math.ceil(fixedCs01 / (slopeCs01 - r.visa));
-      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 黃金交叉：${crossAud.toLocaleString()} AUD`;
+      const crossSrc = (csLive && maxLive) ? 'CoinSpot／MAX 官方牌價計' : '估算值';
+      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 黃金交叉約 ${crossAud.toLocaleString()} AUD（${crossSrc}）`;
     } else {
-      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 全額度皆由 ING 直領勝出`;
+      crossText = `較次優省 ${mode === 'AUD_TO_TWD' ? 'NT$ ' + Math.round(diff).toLocaleString() : diff.toFixed(2) + ' AUD'} · 全額度皆由 ING 台灣 ATM 提領勝出`;
     }
     document.getElementById('winnerSub').textContent = crossText;
 
@@ -1342,48 +1431,98 @@
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fetchNativeRates) {
         window.webkit.messageHandlers.fetchNativeRates.postMessage({});
+        nativePending = true;
+        setTimeout(() => {
+          if (nativePending) {
+            nativePending = false;
+            setStatusFail();
+            document.getElementById('syncBtn').textContent = '立即更新';
+            updateSourceNote();
+          }
+        }, 12000);
         return;
       }
-      const [fxAudRes, fxUsdRes, cgRes, cbaRes] = await Promise.allSettled([
+      const [fxAudRes, fxUsdRes, cgRes, cbaRes, csRes, maxRes, wiseRes] = await Promise.allSettled([
         fetch('https://open.er-api.com/v6/latest/AUD').then(r => r.json()),
         fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
         fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=aud,twd').then(r => r.json()),
-        fetch('https://www.commbank.com.au/content/data/forex-rates/AUD.json').then(r => r.json())
+        fetch('https://www.commbank.com.au/content/data/forex-rates/AUD.json').then(r => r.json()),
+        fetch('https://www.coinspot.com.au/pubapi/v2/latest').then(r => r.json()),
+        fetch('https://max-api.maicoin.com/api/v2/tickers/usdttwd').then(r => r.json()),
+        fetch('https://wise.com/gateway/v1/price?sourceAmount=1000&sourceCurrency=AUD&targetCurrency=TWD').then(r => r.json())
       ]);
+
+      let anyOk = false;
 
       if (fxAudRes.status === 'fulfilled' && fxAudRes.value?.rates) {
         const twd = fxAudRes.value.rates.TWD;
-        const usd = fxAudRes.value.rates.USD;
         if (twd) {
           setRateDisplay('rateBotAud', twd.toFixed(4));
           setRateDisplay('rateBotAudBuy', (twd - 0.19).toFixed(4));
           setRateDisplay('rateVisa', (twd * (1 - VISA_SPREAD)).toFixed(4));
+          visaLive = false;
+          anyOk = true;
         }
-        if (usd) {
-          setRateDisplay('rateWiseAudUsd', usd.toFixed(4));
+        if (fxAudRes.value.time_last_update_utc) {
+          erApiUpdatedAt = fxAudRes.value.time_last_update_utc;
         }
+      }
+      // Wise 直接 AUD→TWD 官方報價（瀏覽器可能因 CORS 被擋，失敗時改用估算，不假裝是即時報價）
+      if (wiseRes.status === 'fulfilled') {
+        const opt = pickWiseOption(wiseRes.value);
+        if (opt && opt.midRate > 0) {
+          wiseDirect = { midRate: opt.midRate, flatFee: opt.flatFee || 0, varPct: (opt.variableFeePercent || 0) / 100, live: true };
+          anyOk = true;
+        }
+      }
+      // CoinSpot 官方 API 優先；瀏覽器 CORS 被擋時才用 CoinGecko 中價，並標示為估算
+      if (csRes.status === 'fulfilled' && csRes.value?.prices?.usdt?.ask) {
+        const ask = parseFloat(csRes.value.prices.usdt.ask);
+        if (ask > 0) { setRateDisplay('rateCs', ask.toFixed(4)); csLive = true; anyOk = true; }
+      }
+      if (!csLive && cgRes.status === 'fulfilled' && cgRes.value?.tether?.aud) {
+        setRateDisplay('rateCs', cgRes.value.tether.aud.toFixed(4));
+        csLive = false;
+        anyOk = true;
+      }
+      // MAX 官方 API 優先；失敗時用 CoinGecko 估算
+      if (maxRes.status === 'fulfilled' && maxRes.value?.buy) {
+        const buy = parseFloat(maxRes.value.buy);
+        if (buy > 0) { setRateDisplay('rateMax', buy.toFixed(4)); maxLive = true; anyOk = true; }
+      }
+      if (!maxLive && cgRes.status === 'fulfilled' && cgRes.value?.tether?.twd) {
+        setRateDisplay('rateMax', cgRes.value.tether.twd.toFixed(4));
+        maxLive = false;
+        anyOk = true;
       }
       if (cbaRes.status === 'fulfilled' && cbaRes.value?.currencies) {
         const twdObj = cbaRes.value.currencies.find(c => c.currencyTitle === 'TWD' || c.code === 'TWD');
         if (twdObj) {
-          const cbaVal = parseFloat(twdObj.imtRate || twdObj.sellTT || twdObj.rate);
-          if (cbaVal > 0) setRateDisplay('rateCbaAudTwd', cbaVal.toFixed(4));
+          // CommBank 未公布 TWD 電匯牌告（bbImt/bsImt 皆為 0），唯一有數值的
+          // gfCash 是「Get foreign cash」外幣現鈔牌告，僅供參考，一律標示為估算
+          const cbaVal = parseFloat(twdObj.gfCash);
+          if (cbaVal > 0) { setRateDisplay('rateCbaAudTwd', cbaVal.toFixed(4)); cbaEstimated = true; anyOk = true; }
         }
       }
       if (fxUsdRes.status === 'fulfilled' && fxUsdRes.value?.rates?.TWD) {
         botUsdMidRate = fxUsdRes.value.rates.TWD;
         const botUsd = botUsdMidRate - 0.05;
         setRateDisplay('rateBotUsdBuy', botUsd.toFixed(3));
-      }
-      if (cgRes.status === 'fulfilled' && cgRes.value?.tether) {
-        if (cgRes.value.tether.aud) setRateDisplay('rateCs', cgRes.value.tether.aud.toFixed(4));
-        if (cgRes.value.tether.twd) setRateDisplay('rateMax', cgRes.value.tether.twd.toFixed(4));
+        anyOk = true;
       }
       const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-      document.getElementById('statusText').textContent = `即時報價 · 更新於 ${now}`;
+      if (anyOk) {
+        lastOkSyncAt = now;
+        setStatusOk(`即時報價 · 更新於 ${now}`);
+      } else {
+        setStatusFail();
+      }
+      updateSourceNote();
       recalc();
     } catch (e) {
       console.error(e);
+      setStatusFail();
+      updateSourceNote();
     } finally {
       syncBtn.textContent = '立即更新';
     }
@@ -1391,26 +1530,47 @@
 
   window.__updateNativeRates = function(payload) {
     if (!payload) return;
+    nativePending = false;
+    let applied = 0;
     if (payload.midAudTwd) {
       setRateDisplay('rateBotAud', Number(payload.midAudTwd).toFixed(4));
       if (payload.visaAudTwd) {
         setRateDisplay('rateVisa', Number(payload.visaAudTwd).toFixed(4));
+        visaLive = true;
       } else {
         setRateDisplay('rateVisa', (Number(payload.midAudTwd) * (1 - VISA_SPREAD)).toFixed(4));
+        visaLive = false;
       }
       if (payload.botAudBuy) setRateDisplay('rateBotAudBuy', Number(payload.botAudBuy).toFixed(4));
+      applied++;
     }
     if (payload.cbaAudTwd) {
       setRateDisplay('rateCbaAudTwd', Number(payload.cbaAudTwd).toFixed(4));
+      cbaEstimated = payload.cbaEstimated === 1;
+      applied++;
+    }
+    if (payload.wiseMidRate) {
+      wiseDirect = {
+        midRate: Number(payload.wiseMidRate),
+        flatFee: Number(payload.wiseFlatFee || 0),
+        varPct: Number(payload.wiseVarPct || 0),
+        live: true
+      };
+      applied++;
     }
     if (payload.botUsdMid) botUsdMidRate = Number(payload.botUsdMid);
     if (payload.botUsdTwdBuy) setRateDisplay('rateBotUsdBuy', Number(payload.botUsdTwdBuy).toFixed(3));
-    if (payload.wiseAudUsd) setRateDisplay('rateWiseAudUsd', Number(payload.wiseAudUsd).toFixed(4));
-    if (payload.csUsdtAud) setRateDisplay('rateCs', Number(payload.csUsdtAud).toFixed(4));
-    if (payload.maxUsdtTwd) setRateDisplay('rateMax', Number(payload.maxUsdtTwd).toFixed(4));
+    if (payload.csUsdtAud) { setRateDisplay('rateCs', Number(payload.csUsdtAud).toFixed(4)); csLive = true; applied++; }
+    if (payload.maxUsdtTwd) { setRateDisplay('rateMax', Number(payload.maxUsdtTwd).toFixed(4)); maxLive = true; applied++; }
     const now = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-    document.getElementById('statusText').textContent = `台銀/CBA/Visa/MAX直連 · ${now}`;
+    if (applied > 0) {
+      lastOkSyncAt = now;
+      setStatusOk(`台銀/CBA/Visa/MAX直連 · ${now}`);
+    } else {
+      setStatusFail();
+    }
     document.getElementById('syncBtn').textContent = '立即更新';
+    updateSourceNote();
     recalc();
   };
 
