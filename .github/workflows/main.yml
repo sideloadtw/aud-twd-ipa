@@ -50,7 +50,10 @@ jobs:
                   var botAudBuy: Double? = nil
                   var botUsdTwdBuy: Double? = nil
                   var botUsdMid: Double? = nil
-                  var wiseAudUsd: Double? = nil
+                  var wiseMidRate: Double? = nil
+                  var wiseFlatFee: Double? = nil
+                  var wiseVarPct: Double? = nil
+                  var cbaEstimated = false
                   var csUsdtAud: Double? = nil
                   var maxUsdtTwd: Double? = nil
                   var cbaAudTwd: Double? = nil
@@ -94,11 +97,15 @@ jobs:
                               for item in list {
                                   let code = (item["currencyTitle"] as? String) ?? (item["code"] as? String) ?? ""
                                   if code == "TWD" {
-                                      if let imtStr = (item["imtRate"] as? String) ?? (item["sellTT"] as? String) ?? (item["rate"] as? String),
-                                         let val = Double(imtStr), val > 0 {
+                                      // CommBank 未公布 TWD 電匯牌告（bbImt/bsImt 皆為 0），
+                                      // 唯一有數值的 gfCash 是「Get foreign cash」外幣現鈔牌告，
+                                      // 僅供參考顯示，App 內一律標示為「估算」。
+                                      if let gfStr = item["gfCash"] as? String, let val = Double(gfStr), val > 0 {
                                           cbaAudTwd = (val * 10000).rounded() / 10000
-                                      } else if let valNum = (item["imtRate"] as? Double) ?? (item["sellTT"] as? Double) ?? (item["rate"] as? Double), valNum > 0 {
-                                          cbaAudTwd = (valNum * 10000).rounded() / 10000
+                                          cbaEstimated = true
+                                      } else if let gfNum = item["gfCash"] as? Double, gfNum > 0 {
+                                          cbaAudTwd = (gfNum * 10000).rounded() / 10000
+                                          cbaEstimated = true
                                       }
                                       break
                                   }
@@ -121,6 +128,7 @@ jobs:
                                           botAudBuy = (b * 10000).rounded() / 10000
                                           if cbaAudTwd == nil {
                                               cbaAudTwd = (((b + s) / 2.0 * (1.0 - 0.0303)) * 10000).rounded() / 10000
+                                              cbaEstimated = true
                                           }
                                       }
                                       if cols[0] == "USD", let b = Double(cols[3]), let s = Double(cols[13]), b > 0, s > 0 {
@@ -133,7 +141,7 @@ jobs:
                       }.resume()
                   }
 
-                  // 3. 國際外匯與 Wise AUD/USD
+                  // 3. 國際外匯（ER-API，台銀 CSV 失敗時的備援）
                   if let fxUrl = URL(string: "https://open.er-api.com/v6/latest/AUD") {
                       group.enter()
                       URLSession.shared.dataTask(with: fxUrl) { data, _, _ in
@@ -145,7 +153,30 @@ jobs:
                                   midAudTwd = (twd * 10000).rounded() / 10000
                                   botAudBuy = ((twd - 0.19) * 10000).rounded() / 10000
                               }
-                              if let usd = rates["USD"] as? Double { wiseAudUsd = (usd * 10000).rounded() / 10000 }
+                          }
+                      }.resume()
+                  }
+
+                  // 3b. Wise 官方直接 AUD→TWD 報價（OSKO 匯入 → 台灣銀行轉帳，無 USD 中轉）
+                  if let wiseUrl = URL(string: "https://wise.com/gateway/v1/price?sourceAmount=1000&sourceCurrency=AUD&targetCurrency=TWD") {
+                      group.enter()
+                      var wiseReq = URLRequest(url: wiseUrl)
+                      wiseReq.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+                      URLSession.shared.dataTask(with: wiseReq) { data, _, _ in
+                          defer { group.leave() }
+                          if let data = data,
+                             let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                              let opt = arr.first(where: { ($0["payInMethod"] as? String) == "OSKO" && ($0["payOutMethod"] as? String) == "BANK_TRANSFER" })
+                                  ?? arr.first(where: { ($0["payOutMethod"] as? String) == "BANK_TRANSFER" })
+                                  ?? arr.first
+                              if let o = opt,
+                                 let mid = o["midRate"] as? Double, mid > 0,
+                                 let flat = o["flatFee"] as? Double,
+                                 let varPct = o["variableFeePercent"] as? Double {
+                                  wiseMidRate = mid
+                                  wiseFlatFee = flat
+                                  wiseVarPct = varPct / 100.0
+                              }
                           }
                       }.resume()
                   }
@@ -184,7 +215,10 @@ jobs:
                       if let c = cbaAudTwd { dict["cbaAudTwd"] = c }
                       if let u = botUsdTwdBuy { dict["botUsdTwdBuy"] = u }
                       if let um = botUsdMid { dict["botUsdMid"] = um }
-                      if let w = wiseAudUsd { dict["wiseAudUsd"] = w }
+                      if let w = wiseMidRate { dict["wiseMidRate"] = w }
+                      if let wf = wiseFlatFee { dict["wiseFlatFee"] = wf }
+                      if let wv = wiseVarPct { dict["wiseVarPct"] = wv }
+                      if cbaEstimated { dict["cbaEstimated"] = 1.0 }
                       if let cs = csUsdtAud { dict["csUsdtAud"] = cs }
                       if let x = maxUsdtTwd { dict["maxUsdtTwd"] = x }
                       if let jsonData = try? JSONSerialization.data(withJSONObject: dict),
@@ -272,8 +306,8 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundleName</key><string>AUDTWDPro</string>
             <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>10.0.0</string>
-            <key>CFBundleVersion</key><string>10</string>
+            <key>CFBundleShortVersionString</key><string>10.0.1</string>
+            <key>CFBundleVersion</key><string>11</string>
             <key>CFBundleIcons</key>
             <dict>
               <key>CFBundlePrimaryIcon</key>
